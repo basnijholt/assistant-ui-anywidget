@@ -3,35 +3,38 @@
 
 import sys
 import os
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'python'))
+
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "python"))
 
 from agent_widget import AgentWidget
+
 
 def test_widget_in_notebook():
     """Test widget creation and display."""
     print("Creating AgentWidget...")
     widget = AgentWidget()
-    
+
     print("Widget created successfully!")
     print(f"Widget ID: {widget.model_id}")
     print(f"Widget class: {widget.__class__.__name__}")
-    
+
     # Display the widget
     print("\nDisplaying widget...")
     return widget
 
+
 if __name__ == "__main__":
     widget = test_widget_in_notebook()
-    
+
     print("\nTo use in Jupyter:")
     print("1. Start Jupyter: uv run jupyter notebook")
     print("2. Create new notebook")
     print("3. Run: from python.agent_widget import AgentWidget")
     print("4. Run: widget = AgentWidget()")
     print("5. Run: widget")
-    
+
     # For testing, we can also create a simple notebook file
-    notebook_content = '''
+    notebook_content = """
 {
  "cells": [
   {
@@ -78,9 +81,9 @@ if __name__ == "__main__":
  "nbformat": 4,
  "nbformat_minor": 4
 }
-'''
-    
-    with open('test_widget.ipynb', 'w') as f:
+"""
+
+    with open("test_widget.ipynb", "w") as f:
         f.write(notebook_content)
-        
+
     print("\nCreated test_widget.ipynb for testing in Jupyter!")
