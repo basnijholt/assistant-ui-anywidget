@@ -1,0 +1,1 @@
+# Test package for assistant-ui-widget
