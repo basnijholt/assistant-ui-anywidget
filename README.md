@@ -20,12 +20,34 @@ uv run python test_widget.py
 
 ## Usage in Jupyter
 
+### Option 1: Start Jupyter and test manually
+```bash
+# Start Jupyter notebook
+uv run jupyter notebook
+
+# Open test_widget.ipynb or create a new notebook
+# Then run:
+```
+
 ```python
-from python.agent_widget import AgentWidget
+import sys
+sys.path.insert(0, 'python')
+from agent_widget import AgentWidget
 
 # Create and display the widget
 widget = AgentWidget()
 widget
+```
+
+### Option 2: Use the test notebook
+```bash
+# Create test notebook
+uv run python test_notebook.py
+
+# Start Jupyter
+uv run jupyter notebook
+
+# Open test_widget.ipynb
 ```
 
 ## Features
