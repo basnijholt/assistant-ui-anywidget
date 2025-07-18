@@ -1,0 +1,22 @@
+{
+  "name": "assistant-ui-widget",
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "build": "vite build",
+    "dev": "vite build --watch"
+  },
+  "devDependencies": {
+    "@types/react": "^18.2.43",
+    "@types/react-dom": "^18.2.17",
+    "@vitejs/plugin-react": "^4.2.1",
+    "typescript": "^5.2.2",
+    "vite": "^5.0.8"
+  },
+  "dependencies": {
+    "@anywidget/react": "^0.1.0",
+    "@assistant-ui/react": "^0.7.0",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0"
+  }
+}
