@@ -14,22 +14,17 @@ npm install
 npm run build
 cd ..
 
-# Test the widget
-uv run python test_widget.py
+# Run tests
+uv run python tests/run_tests.py
 ```
 
 ## Usage in Jupyter
 
-### Option 1: Start Jupyter and test manually
 ```bash
 # Start Jupyter notebook
 uv run jupyter notebook
 
-# Open test_widget.ipynb or create a new notebook
-# Then run:
-```
-
-```python
+# In a new notebook:
 import sys
 sys.path.insert(0, 'python')
 from agent_widget import AgentWidget
@@ -39,40 +34,99 @@ widget = AgentWidget()
 widget
 ```
 
-### Option 2: Use the test notebook
-```bash
-# Create test notebook
-uv run python test_notebook.py
-
-# Start Jupyter
-uv run jupyter notebook
-
-# Open test_widget.ipynb
-```
-
 ## Features
 
-- ✅ Basic chat interface with React
-- ✅ Bidirectional communication between Python and JavaScript
-- ✅ Simple message echoing for testing
-- ✅ Built with modern tooling (Vite, TypeScript, uv)
+- ✅ **Working chat interface** with React components
+- ✅ **Bidirectional communication** between Python and JavaScript
+- ✅ **Browser compatibility** - no external dependencies
+- ✅ **Message echoing** for testing
+- ✅ **Modern tooling** (Vite, TypeScript, uv)
+- ✅ **Comprehensive test suite**
 
 ## Project Structure
 
 ```
 ├── python/
+│   ├── __init__.py
 │   └── agent_widget.py     # Python widget implementation
 ├── frontend/
 │   ├── src/
 │   │   └── index.tsx       # React component
+│   ├── dist/
+│   │   └── index.js        # Built bundle (203KB)
 │   ├── package.json
 │   └── vite.config.ts      # Build configuration
+├── tests/
+│   ├── run_tests.py        # Test runner
+│   ├── test_widget.py      # Basic tests
+│   ├── test_widget_simple.py
+│   ├── test_widget_comprehensive.py
+│   └── test_widget.ipynb   # Jupyter test notebook
 ├── pyproject.toml          # Python dependencies
-└── test_widget.py          # Test script
+└── README.md
 ```
 
 ## Development
 
-- Frontend: `cd frontend && npm run dev` for watch mode
-- Python: `uv run python test_widget.py` to test
-- Build: `cd frontend && npm run build` to create production bundle
+### Frontend Development
+```bash
+cd frontend
+npm run dev      # Watch mode with hot reload
+npm run build    # Production build
+```
+
+### Testing
+```bash
+# Run all tests
+uv run python tests/run_tests.py
+
+# Run specific test
+uv run python tests/test_widget_simple.py
+
+# Test in Jupyter
+uv run jupyter notebook tests/test_widget.ipynb
+```
+
+### Python Development
+```bash
+# Install dependencies
+uv sync
+
+# Test widget creation
+uv run python tests/test_widget_simple.py
+```
+
+## How It Works
+
+1. **Python Side** (`python/agent_widget.py`):
+   - Extends `anywidget.AnyWidget`
+   - Handles message routing and state management
+   - Echoes user messages for testing
+
+2. **JavaScript Side** (`frontend/src/index.tsx`):
+   - React component with chat interface
+   - Uses `@anywidget/react` for widget integration
+   - Handles user input and message display
+
+3. **Communication**:
+   - Python → JS: `widget.send()` method
+   - JS → Python: `model.send()` method
+   - Bidirectional message passing with JSON
+
+## Troubleshooting
+
+**Widget not displaying?**
+- Ensure frontend is built: `cd frontend && npm run build`
+- Check imports: `sys.path.insert(0, 'python')`
+- Verify bundle exists: `ls frontend/dist/index.js`
+
+**Import errors?**
+- All dependencies bundled (no external imports)
+- Bundle size: ~203KB (includes React)
+- Works in any Jupyter environment
+
+**Need more features?**
+- Add AI agent integration (OpenAI, LangChain)
+- Implement streaming responses
+- Add file upload support
+- Customize UI components
