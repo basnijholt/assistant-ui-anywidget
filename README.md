@@ -1,5 +1,8 @@
 # Assistant-UI AnyWidget
 
+> [!WARNING]
+> This is a work in progress!
+
 A minimal integration of Assistant-UI with AnyWidget for Jupyter notebooks.
 
 ## Quick Start
