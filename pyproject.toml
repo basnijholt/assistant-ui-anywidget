@@ -8,6 +8,8 @@ authors = [
 dependencies = [
     "anywidget",
     "traitlets",
+    "jupyter",
+    "ipywidgets",
 ]
 requires-python = ">=3.8"
 
@@ -20,6 +22,9 @@ include = [
     "python/**/*.py",
     "frontend/dist/**/*"
 ]
+
+[tool.hatch.build.targets.wheel]
+packages = ["python"]
 
 [dependency-groups]
 dev = [
