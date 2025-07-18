@@ -1,0 +1,27 @@
+[project]
+name = "assistant-ui-widget"
+version = "0.1.0"
+description = "AnyWidget integration with Assistant-UI"
+authors = [
+    {name = "Assistant", email = "assistant@example.com"}
+]
+dependencies = [
+    "anywidget",
+    "traitlets",
+]
+requires-python = ">=3.8"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build]
+include = [
+    "python/**/*.py",
+    "frontend/dist/**/*"
+]
+
+[dependency-groups]
+dev = [
+    "notebook>=7.3.3",
+]
