@@ -60,10 +60,10 @@ widget
 │   ├── package.json
 │   └── vite.config.ts      # Build configuration
 ├── tests/
-│   ├── run_tests.py        # Test runner
-│   ├── test_widget.py      # Basic tests
-│   ├── test_widget_simple.py
-│   ├── test_widget_comprehensive.py
+│   ├── conftest.py         # pytest fixtures and configuration
+│   ├── test_widget_basic.py      # Basic widget tests
+│   ├── test_chat_synchronization_pytest.py  # Comprehensive sync tests
+│   ├── run_tests.py        # Legacy test runner
 │   └── test_widget.ipynb   # Jupyter test notebook
 ├── pyproject.toml          # Python dependencies
 └── README.md
@@ -80,11 +80,20 @@ npm run build    # Production build
 
 ### Testing
 ```bash
-# Run all tests
-uv run python tests/run_tests.py
+# Run all tests with pytest
+uv run pytest
 
-# Run specific test
-uv run python tests/test_widget_simple.py
+# Run specific test file
+uv run pytest tests/test_widget_basic.py
+
+# Run with verbose output
+uv run pytest -v
+
+# Run specific test class or function
+uv run pytest tests/test_widget_basic.py::TestWidgetBasics::test_widget_creation
+
+# Run with coverage
+uv run pytest --cov=python
 
 # Test in Jupyter
 uv run jupyter notebook tests/test_widget.ipynb

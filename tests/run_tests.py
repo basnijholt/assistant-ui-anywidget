@@ -43,7 +43,12 @@ def main():
     print("Assistant-UI Widget Test Suite")
     print("=" * 50)
 
-    tests = ["test_widget.py", "test_widget_simple.py", "test_widget_comprehensive.py"]
+    tests = [
+        "test_widget.py",
+        "test_widget_simple.py",
+        "test_widget_comprehensive.py",
+        "test_chat_synchronization.py",
+    ]
 
     results = []
     for test in tests:
