@@ -86,18 +86,18 @@ import openai
 async def _handle_message(self, _, content, buffers=None):
     if content.get("type") == "user_message":
         user_text = content.get("text", "")
-        
+
         # Stream from OpenAI
         response = openai.ChatCompletion.create(
             model="gpt-3.5-turbo",
             messages=[{"role": "user", "content": user_text}],
             stream=True
         )
-        
+
         for chunk in response:
             if chunk.choices[0].delta.content:
                 self.send({
-                    "type": "assistant_chunk", 
+                    "type": "assistant_chunk",
                     "delta": chunk.choices[0].delta.content
                 })
 ```
