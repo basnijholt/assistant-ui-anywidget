@@ -12,13 +12,13 @@ sys.path.insert(0, str(Path(__file__).parent.parent / "python"))
 from agent_widget import AgentWidget
 
 
-@pytest.fixture
+@pytest.fixture  # type: ignore[misc]
 def widget() -> AgentWidget:
     """Create a fresh widget instance for each test."""
     return AgentWidget()
 
 
-@pytest.fixture
+@pytest.fixture  # type: ignore[misc]
 def sample_messages() -> list[dict[str, str]]:
     """Sample message data for testing."""
     return [
@@ -32,7 +32,7 @@ def sample_messages() -> list[dict[str, str]]:
     ]
 
 
-@pytest.fixture
+@pytest.fixture  # type: ignore[misc]
 def ui_message_factory() -> Callable[[str, str], dict[str, str]]:
     """Factory for creating UI message objects."""
 

@@ -1,6 +1,7 @@
 """AgentWidget module for creating interactive chat interfaces."""
 
 import pathlib
+from typing import Any
 
 import anywidget
 import traitlets
@@ -17,11 +18,11 @@ class AgentWidget(anywidget.AnyWidget):
     chat_history = traitlets.List([]).tag(sync=True)
     action_buttons = traitlets.List([]).tag(sync=True)  # List of button labels to display
 
-    def __init__(self, **kwargs) -> None:  # noqa: ANN003, D107
+    def __init__(self, **kwargs: Any) -> None:  # noqa: D107
         super().__init__(**kwargs)
         self.on_msg(self._handle_message)
 
-    def _handle_message(self, _, content, buffers=None) -> None:  # noqa: ANN001, ARG002
+    def _handle_message(self, widget: Any, content: dict[str, Any], buffers: Any = None) -> None:  # noqa: ARG002
         """Handle incoming messages from the frontend."""
         if content.get("type") == "user_message":
             user_text = content.get("text", "")

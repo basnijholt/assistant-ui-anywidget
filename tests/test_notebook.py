@@ -8,7 +8,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "python"))  # n
 from agent_widget import AgentWidget
 
 
-def test_widget_in_notebook() -> object | None:
+def test_widget_in_notebook() -> AgentWidget | None:
     """Test widget creation and display."""
     print("Creating AgentWidget...")
     widget = AgentWidget()

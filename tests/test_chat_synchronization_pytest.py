@@ -15,7 +15,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "python"))  # n
 from agent_widget import AgentWidget
 
 
-@pytest.fixture
+@pytest.fixture  # type: ignore[misc]
 def widget() -> AgentWidget:
     """Create a fresh widget instance for each test."""
     return AgentWidget()
@@ -302,7 +302,7 @@ class TestMessageIntegrity:
 class TestParametrizedCases:
     """Test suite demonstrating pytest parametrization."""
 
-    @pytest.mark.parametrize("role", ["user", "assistant"])
+    @pytest.mark.parametrize("role", ["user", "assistant"])  # type: ignore[misc]
     def test_message_roles(self, widget: AgentWidget, role: str) -> None:
         """Test different message roles."""
         widget.add_message(role, f"Test message from {role}")
@@ -311,7 +311,7 @@ class TestParametrizedCases:
         assert widget.chat_history[0]["role"] == role
         assert widget.chat_history[0]["content"] == f"Test message from {role}"
 
-    @pytest.mark.parametrize("content", ["", "short", "a" * 1000, "🚀 Unicode test"])
+    @pytest.mark.parametrize("content", ["", "short", "a" * 1000, "🚀 Unicode test"])  # type: ignore[misc]
     def test_message_content_types(self, widget: AgentWidget, content: str) -> None:
         """Test different content types."""
         widget.add_message("user", content)
@@ -320,7 +320,7 @@ class TestParametrizedCases:
         assert widget.chat_history[0]["content"] == content
         assert isinstance(widget.chat_history[0]["content"], str)
 
-    @pytest.mark.parametrize("message_count", [1, 5, 10, 100])
+    @pytest.mark.parametrize("message_count", [1, 5, 10, 100])  # type: ignore[misc]
     def test_multiple_messages(self, widget: AgentWidget, message_count: int) -> None:
         """Test adding multiple messages."""
         for i in range(message_count):
