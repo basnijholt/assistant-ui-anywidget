@@ -118,8 +118,6 @@ def test_widget_comprehensive() -> None:  # noqa: PLR0915
     print(f"\nHTML test file created: {html_path}")
     print("You can open this in a browser to test the JavaScript directly.")
 
-    return widget
-
 
 if __name__ == "__main__":
-    widget = test_widget_comprehensive()
+    test_widget_comprehensive()
