@@ -1,6 +1,5 @@
 import React from "react";
 import ReactDOM from "react-dom/client";
-import ChatWidget from "./index";
 
 // Mock the anywidget model for standalone usage
 class MockModel {
