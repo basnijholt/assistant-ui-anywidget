@@ -40,3 +40,11 @@ repos:
               frontend/node_modules/.*|
               .*\.min\.(js|css)$
           )$
+  - repo: local
+    hooks:
+      - id: eslint
+        name: eslint
+        entry: bash -c 'cd frontend && npm run lint'
+        language: system
+        files: ^frontend/src/.*\.(ts|tsx)$
+        pass_filenames: false

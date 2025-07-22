@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useMemo } from "react";
 import { createRender, useModelState, useModel } from "@anywidget/react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
@@ -57,16 +57,15 @@ const styles = `
 
 function ChatWidget() {
   const [input, setInput] = useState("");
-  const [chatHistory, setChatHistory] = useModelState("chat_history");
+  const [chatHistory] = useModelState("chat_history");
   const [actionButtons] = useModelState("action_buttons");
   const model = useModel();
-  const [renderKey, setRenderKey] = useState(0);
   const [copiedIndex, setCopiedIndex] = useState<number | null>(null);
   const messagesEndRef = useRef<null | HTMLDivElement>(null);
   const textareaRef = useRef<null | HTMLTextAreaElement>(null);
 
   // Always use synchronized chat history as the source of truth
-  const messages = Array.isArray(chatHistory) ? chatHistory : [];
+  const messages = useMemo(() => (Array.isArray(chatHistory) ? chatHistory : []), [chatHistory]);
 
   // Auto-scroll to bottom when new messages arrive
   const scrollToBottom = () => {
@@ -86,20 +85,7 @@ function ChatWidget() {
     }
   };
 
-  // Use proper React hook pattern for model changes
-  useEffect(() => {
-    if (model) {
-      const handleChange = () => {
-        setRenderKey(prev => prev + 1);
-      };
-
-      model.on("change:chat_history", handleChange);
-
-      return () => {
-        model.off("change:chat_history", handleChange);
-      };
-    }
-  }, [model]);
+  // Model changes are handled automatically by useModelState
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -124,7 +110,7 @@ function ChatWidget() {
     // Use Ctrl+D (or Cmd+D on Mac) to send message, let Enter behave naturally for new lines
     if ((e.ctrlKey || e.metaKey) && e.key === "d") {
       e.preventDefault();
-      handleSubmit(e as any);
+      handleSubmit(e as React.FormEvent);
     }
   };
 
@@ -217,7 +203,7 @@ function ChatWidget() {
                     <ReactMarkdown
                       remarkPlugins={[remarkGfm]}
                       components={{
-                        code({ node, inline, className, children, ...props }) {
+                        code({ inline, className, children, ...props }) {
                           const match = /language-(\w+)/.exec(className || "");
                           const codeString = String(children).replace(/\n$/, "");
 
@@ -284,45 +270,47 @@ function ChatWidget() {
               flexWrap: "wrap",
             }}
           >
-            {actionButtons.map((button: string | any, index: number) => {
-              // Handle both string and object formats
-              const buttonConfig = typeof button === "string" ? { text: button } : button;
+            {actionButtons.map(
+              (button: string | { text: string; color?: string; icon?: string }, index: number) => {
+                // Handle both string and object formats
+                const buttonConfig = typeof button === "string" ? { text: button } : button;
 
-              return (
-                <button
-                  key={index}
-                  onClick={() => handleActionButton(buttonConfig.text)}
-                  style={{
-                    padding: "10px 20px",
-                    backgroundColor: buttonConfig.color || "#007bff",
-                    color: "white",
-                    border: "none",
-                    borderRadius: "8px",
-                    cursor: "pointer",
-                    fontSize: "14px",
-                    fontWeight: "500",
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "8px",
-                    transition: "all 0.2s ease",
-                    boxShadow: "0 2px 4px rgba(0,0,0,0.1)",
-                  }}
-                  onMouseEnter={e => {
-                    e.currentTarget.style.transform = "translateY(-2px)";
-                    e.currentTarget.style.boxShadow = "0 4px 8px rgba(0,0,0,0.15)";
-                  }}
-                  onMouseLeave={e => {
-                    e.currentTarget.style.transform = "translateY(0)";
-                    e.currentTarget.style.boxShadow = "0 2px 4px rgba(0,0,0,0.1)";
-                  }}
-                >
-                  {buttonConfig.icon && (
-                    <span style={{ fontSize: "18px" }}>{buttonConfig.icon}</span>
-                  )}
-                  {buttonConfig.text}
-                </button>
-              );
-            })}
+                return (
+                  <button
+                    key={index}
+                    onClick={() => handleActionButton(buttonConfig.text)}
+                    style={{
+                      padding: "10px 20px",
+                      backgroundColor: buttonConfig.color || "#007bff",
+                      color: "white",
+                      border: "none",
+                      borderRadius: "8px",
+                      cursor: "pointer",
+                      fontSize: "14px",
+                      fontWeight: "500",
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "8px",
+                      transition: "all 0.2s ease",
+                      boxShadow: "0 2px 4px rgba(0,0,0,0.1)",
+                    }}
+                    onMouseEnter={e => {
+                      e.currentTarget.style.transform = "translateY(-2px)";
+                      e.currentTarget.style.boxShadow = "0 4px 8px rgba(0,0,0,0.15)";
+                    }}
+                    onMouseLeave={e => {
+                      e.currentTarget.style.transform = "translateY(0)";
+                      e.currentTarget.style.boxShadow = "0 2px 4px rgba(0,0,0,0.1)";
+                    }}
+                  >
+                    {buttonConfig.icon && (
+                      <span style={{ fontSize: "18px" }}>{buttonConfig.icon}</span>
+                    )}
+                    {buttonConfig.text}
+                  </button>
+                );
+              }
+            )}
           </div>
         )}
 
