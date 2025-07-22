@@ -1,5 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { createRender, useModelState, useModel } from '@anywidget/react';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
+import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
+import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism';
 
 function ChatWidget() {
   const [input, setInput] = useState('');
@@ -14,7 +18,6 @@ function ChatWidget() {
   useEffect(() => {
     if (model) {
       const handleChange = () => {
-        console.log('Chat history changed via model event');
         setRenderKey(prev => prev + 1);
       };
 
@@ -26,30 +29,13 @@ function ChatWidget() {
     }
   }, [model]);
 
-  // Debug: log current state
-  useEffect(() => {
-    console.log('=== RENDER DEBUG ===');
-    console.log('useModelState chatHistory:', chatHistory);
-    console.log('Messages to display:', messages);
-    console.log('Messages length:', messages.length);
-    console.log('Render key:', renderKey);
-    console.log('Are chatHistory and messages the same?', chatHistory === messages);
-    console.log('==================');
-  }, [chatHistory, messages, renderKey]);
-
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!input.trim()) return;
 
-    console.log('Sending message to Python:', input);
-
     // Send message to Python using the proper model hook
     if (model) {
       model.send({ type: 'user_message', text: input });
-
-      // Log current state for debugging
-      const currentHistory = model.get('chat_history') || [];
-      console.log('Current history before send:', currentHistory);
 
       // Force a save to ensure sync
       model.save_changes();
@@ -89,26 +75,38 @@ function ChatWidget() {
               alignSelf: msg.role === 'user' ? 'flex-end' : 'flex-start',
               maxWidth: '80%'
             }}>
-              <strong>{msg.role === 'user' ? 'You' : 'Assistant'}:</strong> {msg.content}
-              <div style={{ fontSize: '10px', opacity: 0.5, marginTop: '4px' }}>
-                Debug: #{i} | {msg.role}
-              </div>
+              <strong>{msg.role === 'user' ? 'You' : 'Assistant'}:</strong>
+              {msg.role === 'assistant' ? (
+                <ReactMarkdown 
+                  remarkPlugins={[remarkGfm]}
+                  components={{
+                    code({ node, inline, className, children, ...props }) {
+                      const match = /language-(\w+)/.exec(className || '');
+                      return !inline && match ? (
+                        <SyntaxHighlighter
+                          style={vscDarkPlus}
+                          language={match[1]}
+                          PreTag="div"
+                          {...props}
+                        >
+                          {String(children).replace(/\n$/, '')}
+                        </SyntaxHighlighter>
+                      ) : (
+                        <code className={className} {...props}>
+                          {children}
+                        </code>
+                      );
+                    }
+                  }}
+                >
+                  {msg.content}
+                </ReactMarkdown>
+              ) : (
+                <span style={{ whiteSpace: 'pre-wrap' }}>{msg.content}</span>
+              )}
             </div>
           ))
         )}
-      </div>
-
-      {/* Status display */}
-      <div style={{
-        padding: '8px 16px',
-        borderTop: '1px solid #eee',
-        backgroundColor: '#f8f9fa',
-        fontSize: '12px',
-        color: '#666'
-      }}>
-        Chat History: {messages.length} messages (synchronized with Python) | Render: {renderKey}
-        <br />
-        useModelState: {JSON.stringify(chatHistory)}
       </div>
 
       <form onSubmit={handleSubmit} style={{
