@@ -55,10 +55,12 @@ const styles = `
   }
 `;
 
+type ActionButton = string | { text: string; color?: string; icon?: string };
+
 function ChatWidget() {
   const [input, setInput] = useState("");
   const [chatHistory] = useModelState("chat_history");
-  const [actionButtons] = useModelState("action_buttons");
+  const [actionButtons] = useModelState<ActionButton[]>("action_buttons");
   const model = useModel();
   const [copiedIndex, setCopiedIndex] = useState<number | null>(null);
   const messagesEndRef = useRef<null | HTMLDivElement>(null);
@@ -203,11 +205,12 @@ function ChatWidget() {
                     <ReactMarkdown
                       remarkPlugins={[remarkGfm]}
                       components={{
-                        code({ inline, className, children, ...props }) {
+                        code({ className, children, ...props }) {
                           const match = /language-(\w+)/.exec(className || "");
                           const codeString = String(children).replace(/\n$/, "");
+                          const isInline = !className || !match;
 
-                          return !inline && match ? (
+                          return !isInline ? (
                             <div className="code-container">
                               <button
                                 className={`copy-button ${copiedIndex === i ? "copied" : ""}`}
@@ -216,7 +219,7 @@ function ChatWidget() {
                                 {copiedIndex === i ? "✓ Copied" : "Copy"}
                               </button>
                               <SyntaxHighlighter
-                                style={vscDarkPlus}
+                                style={vscDarkPlus as any}
                                 language={match[1]}
                                 PreTag="div"
                                 customStyle={{
@@ -224,7 +227,6 @@ function ChatWidget() {
                                   borderRadius: "6px",
                                   fontSize: "13px",
                                 }}
-                                {...props}
                               >
                                 {codeString}
                               </SyntaxHighlighter>
@@ -258,8 +260,7 @@ function ChatWidget() {
           <div ref={messagesEndRef} />
         </div>
 
-        {/* Action buttons */}
-        {actionButtons && actionButtons.length > 0 && (
+        {actionButtons && Array.isArray(actionButtons) && actionButtons.length > 0 && (
           <div
             style={{
               padding: "16px",
@@ -271,7 +272,7 @@ function ChatWidget() {
             }}
           >
             {actionButtons.map(
-              (button: string | { text: string; color?: string; icon?: string }, index: number) => {
+              (button: ActionButton, index: number) => {
                 // Handle both string and object formats
                 const buttonConfig = typeof button === "string" ? { text: button } : button;
 
