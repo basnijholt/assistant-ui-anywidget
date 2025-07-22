@@ -1,12 +1,11 @@
-"""
-Comprehensive tests for chat history synchronization between Python and JavaScript.
+"""Comprehensive tests for chat history synchronization between Python and JavaScript.
 
 These tests verify that the bidirectional synchronization works correctly
 for all common use cases.
 """
 
-import sys
 import os
+import sys
 
 # Add the python module to the path
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "python"))
@@ -368,9 +367,8 @@ def run_all_tests():
     if passed_tests == total_tests:
         print("🎉 All tests passed!")
         return True
-    else:
-        print(f"❌ {total_tests - passed_tests} tests failed")
-        return False
+    print(f"❌ {total_tests - passed_tests} tests failed")
+    return False
 
 
 if __name__ == "__main__":

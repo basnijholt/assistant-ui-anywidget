@@ -17,7 +17,7 @@ class AgentWidget(anywidget.AnyWidget):
     chat_history = traitlets.List([]).tag(sync=True)
     action_buttons = traitlets.List([]).tag(sync=True)  # List of button labels to display
 
-    def __init__(self, **kwargs) -> None:  # noqa: ANN003
+    def __init__(self, **kwargs) -> None:  # noqa: ANN003, D107
         super().__init__(**kwargs)
         self.on_msg(self._handle_message)
 
@@ -47,9 +47,24 @@ class AgentWidget(anywidget.AnyWidget):
         """Clear the chat history."""
         self.chat_history = []
 
-    def set_action_buttons(self, buttons: list[str]) -> None:
-        """Set action buttons to display. Each button will send its text when clicked."""
-        self.action_buttons = buttons
+    def set_action_buttons(self, buttons: list[str | dict[str, str]]) -> None:
+        """Set action buttons to display. Each button will send its text when clicked.
+
+        Args:
+            buttons: List of button configurations. Each can be:
+                - A string (button text)
+                - A dict with keys: 'text', 'color' (optional), 'icon' (optional)
+                  Example: {'text': 'Approve', 'color': '#28a745', 'icon': '✓'}
+
+        """
+        # Normalize buttons to always be dicts
+        normalized_buttons = []
+        for button in buttons:
+            if isinstance(button, str):
+                normalized_buttons.append({"text": button})
+            else:
+                normalized_buttons.append(button)
+        self.action_buttons = normalized_buttons
 
     def clear_action_buttons(self) -> None:
         """Clear all action buttons."""

@@ -1,12 +1,12 @@
-"""
-Comprehensive pytest tests for chat history synchronization between Python and JavaScript.
+"""Comprehensive pytest tests for chat history synchronization between Python and JavaScript.
 
 These tests verify that the bidirectional synchronization works correctly
 for all common use cases.
 """
 
-import sys
 import os
+import sys
+
 import pytest
 
 # Add the python module to the path
@@ -356,7 +356,8 @@ class TestPerformance:
 
         for i in range(message_count):
             widget._handle_message(
-                None, {"type": "user_message", "text": f"Rapid UI {i}"}
+                None,
+                {"type": "user_message", "text": f"Rapid UI {i}"},
             )
 
         assert len(widget.chat_history) == message_count

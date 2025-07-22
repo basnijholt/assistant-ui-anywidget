@@ -1,9 +1,8 @@
-"""
-Basic pytest tests for AgentWidget functionality.
-"""
+"""Basic pytest tests for AgentWidget functionality."""
+
+import pathlib
 
 import pytest
-import pathlib
 
 
 class TestWidgetBasics:
@@ -31,13 +30,9 @@ class TestWidgetBasics:
     def test_esm_bundle_file_exists(self, widget):
         """Test that the original ESM bundle file exists."""
         # The original path before AnyWidget loads it
-        expected_path = (
-            pathlib.Path(__file__).parent.parent / "frontend" / "dist" / "index.js"
-        )
+        expected_path = pathlib.Path(__file__).parent.parent / "frontend" / "dist" / "index.js"
         assert expected_path.exists(), f"ESM bundle file not found at {expected_path}"
-        assert (
-            expected_path.is_file()
-        ), f"ESM bundle path is not a file: {expected_path}"
+        assert expected_path.is_file(), f"ESM bundle path is not a file: {expected_path}"
 
 
 class TestMessageAPI:

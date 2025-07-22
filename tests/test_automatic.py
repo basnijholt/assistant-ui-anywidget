@@ -1,17 +1,18 @@
-#!/usr/bin/env python3
 """Automatic test for the widget using nbconvert."""
 
-import os
+"""Automatic test for the widget using nbconvert."""
+
+import json
+import subprocess
 import sys
 import tempfile
-import subprocess
-import json
+from pathlib import Path
 
 # Add the python directory to path
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "python"))
+sys.path.insert(0, str(Path(__file__).parent.parent / "python"))
 
 
-def create_test_notebook():
+def create_test_notebook() -> dict:
     """Create a test notebook that uses the widget."""
     notebook = {
         "cells": [
@@ -72,7 +73,7 @@ def create_test_notebook():
     return notebook
 
 
-def run_automatic_test():
+def run_automatic_test() -> bool:
     """Run an automatic test of the widget."""
     print("=== Automatic Widget Test ===")
 
@@ -85,7 +86,7 @@ def run_automatic_test():
         print(f"   ✓ Widget created: {widget.__class__.__name__}")
         print(f"   ✓ Widget ID: {widget.model_id}")
         print(
-            f"   ✓ ESM type: {'bundled JS' if widget._esm.startswith('var') else 'file path'}"
+            f"   ✓ ESM type: {'bundled JS' if widget._esm.startswith('var') else 'file path'}",
         )
     except Exception as e:
         print(f"   ✗ Widget creation failed: {e}")
@@ -93,19 +94,13 @@ def run_automatic_test():
 
     # Test 2: Check built JS file
     print("\n2. Testing built JavaScript...")
-    frontend_js = os.path.join(
-        os.path.dirname(__file__), "frontend", "dist", "index.js"
-    )
+    frontend_js = str(Path(__file__).parent / "frontend" / "dist" / "index.js")
     if os.path.exists(frontend_js):
-        with open(frontend_js, "r") as f:
+        with open(frontend_js) as f:
             content = f.read()
 
         # Check if React is bundled (not imported)
-        if (
-            content.startswith("var")
-            and "React" in content
-            and "import" not in content[:100]
-        ):
+        if content.startswith("var") and "React" in content and "import" not in content[:100]:
             print("   ✓ JavaScript bundle exists and contains React")
         else:
             print("   ✗ JavaScript bundle may have import issues")
@@ -137,7 +132,8 @@ def run_automatic_test():
             ],
             capture_output=True,
             text=True,
-            cwd=os.path.dirname(__file__),
+            cwd=str(Path(__file__).parent),
+            check=False,
         )
 
         if result.returncode == 0:
@@ -149,8 +145,9 @@ def run_automatic_test():
         # Clean up
         os.unlink(notebook_path)
         executed_path = notebook_path.replace(".ipynb", "_executed.ipynb")
-        if os.path.exists(executed_path):
-            os.unlink(executed_path)
+        executed_path_obj = Path(executed_path)
+        if executed_path_obj.exists():
+            executed_path_obj.unlink()
 
     except Exception as e:
         print(f"   ✗ Notebook test failed: {e}")

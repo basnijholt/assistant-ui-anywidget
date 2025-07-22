@@ -1,11 +1,9 @@
 #!/usr/bin/env python3
-"""
-Test summary script to show pytest test results.
-"""
+"""Test summary script to show pytest test results."""
 
+import os
 import subprocess
 import sys
-import os
 
 
 def run_pytest_summary():
@@ -29,7 +27,7 @@ def run_pytest_summary():
         "--disable-warnings",
     ]
 
-    result = subprocess.run(cmd, capture_output=True, text=True)
+    result = subprocess.run(cmd, capture_output=True, text=True, check=False)
 
     print("Test Results:")
     print(result.stdout)
