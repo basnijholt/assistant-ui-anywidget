@@ -17,15 +17,15 @@ const styles = `
       transform: translateY(0);
     }
   }
-  
+
   .message-enter {
     animation: fadeIn 0.3s ease-out;
   }
-  
+
   .code-container {
     position: relative;
   }
-  
+
   .copy-button {
     position: absolute;
     top: 8px;
@@ -39,15 +39,15 @@ const styles = `
     opacity: 0;
     transition: opacity 0.2s;
   }
-  
+
   .code-container:hover .copy-button {
     opacity: 1;
   }
-  
+
   .copy-button:hover {
     background: #f0f0f0;
   }
-  
+
   .copy-button.copied {
     background: #28a745;
     color: white;
@@ -121,7 +121,8 @@ function ChatWidget() {
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
+    // Use Ctrl+D (or Cmd+D on Mac) to send message, let Enter behave naturally for new lines
+    if ((e.ctrlKey || e.metaKey) && e.key === 'd') {
       e.preventDefault();
       handleSubmit(e as any);
     }
@@ -166,8 +167,8 @@ function ChatWidget() {
           borderRadius: '12px 12px 0 0'
         }}>
           {messages.length === 0 ? (
-            <div style={{ 
-              color: '#999', 
+            <div style={{
+              color: '#999',
               fontStyle: 'italic',
               textAlign: 'center',
               marginTop: '100px'
@@ -176,8 +177,8 @@ function ChatWidget() {
             </div>
           ) : (
             messages.map((msg, i) => (
-              <div 
-                key={`${msg.role}-${i}-${msg.content?.slice(0, 20)}`} 
+              <div
+                key={`${msg.role}-${i}-${msg.content?.slice(0, 20)}`}
                 className="message-enter"
                 style={{
                   marginBottom: '16px',
@@ -194,9 +195,9 @@ function ChatWidget() {
                   boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
                   wordBreak: 'break-word'
                 }}>
-                  <div style={{ 
-                    fontSize: '12px', 
-                    opacity: 0.7, 
+                  <div style={{
+                    fontSize: '12px',
+                    opacity: 0.7,
                     marginBottom: '4px',
                     fontWeight: '500'
                   }}>
@@ -209,7 +210,7 @@ function ChatWidget() {
                         code({ node, inline, className, children, ...props }) {
                           const match = /language-(\w+)/.exec(className || '');
                           const codeString = String(children).replace(/\n$/, '');
-                          
+
                           return !inline && match ? (
                             <div className="code-container">
                               <button
@@ -233,8 +234,8 @@ function ChatWidget() {
                               </SyntaxHighlighter>
                             </div>
                           ) : (
-                            <code 
-                              className={className} 
+                            <code
+                              className={className}
                               style={{
                                 backgroundColor: 'rgba(0,0,0,0.05)',
                                 padding: '2px 4px',
@@ -332,7 +333,7 @@ function ChatWidget() {
               adjustTextareaHeight();
             }}
             onKeyDown={handleKeyDown}
-            placeholder="Type a message... (Shift+Enter for new line)"
+            placeholder="Type a message... (Ctrl+D to send)"
             style={{
               flex: 1,
               padding: '10px 14px',
