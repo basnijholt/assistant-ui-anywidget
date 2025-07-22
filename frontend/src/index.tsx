@@ -85,7 +85,7 @@ function ChatWidget() {
             }}>
               <strong>{msg.role === 'user' ? 'You' : 'Assistant'}:</strong>
               {msg.role === 'assistant' ? (
-                <ReactMarkdown 
+                <ReactMarkdown
                   remarkPlugins={[remarkGfm]}
                   components={{
                     code({ node, inline, className, children, ...props }) {
@@ -126,23 +126,47 @@ function ChatWidget() {
           gap: '8px',
           flexWrap: 'wrap'
         }}>
-          {actionButtons.map((buttonText: string, index: number) => (
-            <button
-              key={index}
-              onClick={() => handleActionButton(buttonText)}
-              style={{
-                padding: '8px 16px',
-                backgroundColor: '#007bff',
-                color: 'white',
-                border: 'none',
-                borderRadius: '4px',
-                cursor: 'pointer',
-                fontSize: '14px'
-              }}
-            >
-              {buttonText}
-            </button>
-          ))}
+          {actionButtons.map((button: string | any, index: number) => {
+            // Handle both string and object formats
+            const buttonConfig = typeof button === 'string'
+              ? { text: button }
+              : button;
+
+            return (
+              <button
+                key={index}
+                onClick={() => handleActionButton(buttonConfig.text)}
+                style={{
+                  padding: '10px 20px',
+                  backgroundColor: buttonConfig.color || '#007bff',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '6px',
+                  cursor: 'pointer',
+                  fontSize: '14px',
+                  fontWeight: '500',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  transition: 'all 0.2s ease',
+                  boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.transform = 'translateY(-2px)';
+                  e.currentTarget.style.boxShadow = '0 4px 8px rgba(0,0,0,0.15)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.transform = 'translateY(0)';
+                  e.currentTarget.style.boxShadow = '0 2px 4px rgba(0,0,0,0.1)';
+                }}
+              >
+                {buttonConfig.icon && (
+                  <span style={{ fontSize: '18px' }}>{buttonConfig.icon}</span>
+                )}
+                {buttonConfig.text}
+              </button>
+            );
+          })}
         </div>
       )}
 

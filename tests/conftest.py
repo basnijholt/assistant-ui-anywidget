@@ -1,25 +1,25 @@
-"""
-Pytest configuration and fixtures for widget tests.
-"""
+"""Pytest configuration and fixtures for widget tests."""
 
 import sys
-import os
+from collections.abc import Callable
+from pathlib import Path
+
 import pytest
 
 # Add the python module to the path
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "python"))
+sys.path.insert(0, str(Path(__file__).parent.parent / "python"))
 
 from agent_widget import AgentWidget
 
 
 @pytest.fixture
-def widget():
+def widget() -> AgentWidget:
     """Create a fresh widget instance for each test."""
     return AgentWidget()
 
 
 @pytest.fixture
-def sample_messages():
+def sample_messages() -> list[dict[str, str]]:
     """Sample message data for testing."""
     return [
         {"role": "user", "content": "Hello world"},
@@ -33,10 +33,10 @@ def sample_messages():
 
 
 @pytest.fixture
-def ui_message_factory():
+def ui_message_factory() -> Callable[[str, str], dict[str, str]]:
     """Factory for creating UI message objects."""
 
-    def _create_ui_message(text, message_type="user_message"):
+    def _create_ui_message(text: str, message_type: str = "user_message") -> dict[str, str]:
         return {"type": message_type, "text": text}
 
     return _create_ui_message

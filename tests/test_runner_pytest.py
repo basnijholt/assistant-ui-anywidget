@@ -1,11 +1,9 @@
 #!/usr/bin/env python3
-"""
-Pytest-based test runner for all widget tests.
-"""
+"""Pytest-based test runner for all widget tests."""
 
-import sys
-import subprocess
 import os
+import subprocess
+import sys
 
 
 def run_pytest_tests():
@@ -29,7 +27,7 @@ def run_pytest_tests():
     ]
 
     try:
-        result = subprocess.run(cmd, capture_output=False, text=True)
+        result = subprocess.run(cmd, capture_output=False, text=True, check=False)
         return result.returncode == 0
     except Exception as e:
         print(f"Error running pytest: {e}")
@@ -43,9 +41,8 @@ def main():
     if success:
         print("\n🎉 All tests passed!")
         return 0
-    else:
-        print("\n❌ Some tests failed")
-        return 1
+    print("\n❌ Some tests failed")
+    return 1
 
 
 if __name__ == "__main__":

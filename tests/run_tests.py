@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """Test runner for all widget tests."""
 
+import os
 import subprocess
 import sys
-import os
 
 
 def run_test(test_file):
@@ -19,6 +19,7 @@ def run_test(test_file):
             capture_output=True,
             text=True,
             cwd=os.path.dirname(__file__),
+            check=False,
         )
 
         if result.returncode == 0:
@@ -71,9 +72,8 @@ def main():
     if passed == total:
         print("\n🎉 All tests passed!")
         return 0
-    else:
-        print(f"\n❌ {total - passed} tests failed")
-        return 1
+    print(f"\n❌ {total - passed} tests failed")
+    return 1
 
 
 if __name__ == "__main__":

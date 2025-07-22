@@ -1,1 +1,1 @@
-# Test package for assistant-ui-widget
+"""Test suite for assistant-ui-anywidget."""
