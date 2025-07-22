@@ -36,7 +36,9 @@ def sample_messages() -> list[dict[str, str]]:
 def ui_message_factory() -> Callable[[str, str], dict[str, str]]:
     """Factory for creating UI message objects."""
 
-    def _create_ui_message(text: str, message_type: str = "user_message") -> dict[str, str]:
+    def _create_ui_message(
+        text: str, message_type: str = "user_message"
+    ) -> dict[str, str]:
         return {"type": message_type, "text": text}
 
     return _create_ui_message

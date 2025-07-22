@@ -97,7 +97,11 @@ def run_automatic_test() -> bool:
             content = f.read()
 
         # Check if React is bundled (not imported)
-        if content.startswith("var") and "React" in content and "import" not in content[:100]:
+        if (
+            content.startswith("var")
+            and "React" in content
+            and "import" not in content[:100]
+        ):
             print("   ✓ JavaScript bundle exists and contains React")
         else:
             print("   ✗ JavaScript bundle may have import issues")
