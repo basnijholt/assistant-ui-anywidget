@@ -77,7 +77,7 @@ def run_automatic_test() -> bool:
     # Test 1: Widget creation
     print("\n1. Testing widget creation...")
     try:
-        from agent_widget import AgentWidget
+        from agent_widget import AgentWidget  # noqa: PLC0415
 
         widget = AgentWidget()
         print(f"   ✓ Widget created: {widget.__class__.__name__}")

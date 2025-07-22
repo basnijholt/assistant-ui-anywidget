@@ -1,0 +1,21 @@
+# Dependencies
+node_modules/
+frontend/node_modules/
+
+# Build outputs
+frontend/dist/
+*.min.js
+*.min.css
+
+# Generated files
+.pytest_cache/
+.mypy_cache/
+*.pyc
+__pycache__/
+
+# IDE files
+.vscode/
+.idea/
+
+# Other
+*.ipynb
