@@ -61,9 +61,10 @@ async function takeScreenshot() {
     console.log(`Full page screenshot saved to: ${fullPagePath}`);
 
     // Take widget-only screenshot
+    let widgetPath;
     const widgetElement = await page.$("#root > div");
     if (widgetElement) {
-      const widgetPath = path.join(screenshotsDir, `widget-only-${timestamp}.png`);
+      widgetPath = path.join(screenshotsDir, `widget-only-${timestamp}.png`);
       await widgetElement.screenshot({
         path: widgetPath,
       });

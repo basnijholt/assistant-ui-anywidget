@@ -48,6 +48,7 @@ widget
 - ✅ **Self-contained** - all dependencies bundled (1.4MB)
 - ✅ **Markdown support** with syntax highlighting
 - ✅ **Dynamic action buttons** for interactive responses
+- ✅ **Screenshot capability** - View widget without Jupyter using Puppeteer
 - ✅ **Modern tooling** (Vite, TypeScript, ESLint, Prettier)
 - ✅ **Comprehensive test suite** (74 Python + 6 frontend tests)
 - ✅ **CI/CD automation** with GitHub Actions
@@ -113,6 +114,25 @@ npm test              # Run tests
 npm run test:ui       # Interactive test UI
 npm run test:coverage # Coverage report
 ```
+
+### Taking Screenshots
+
+You can capture screenshots of the widget without running Jupyter:
+
+```bash
+# From the project root
+python take_screenshot.py
+
+# Or manually from the frontend directory
+cd frontend
+npm run demo       # Start demo server
+npm run screenshot # Take screenshot (in another terminal)
+```
+
+Screenshots are saved to `frontend/screenshots/`. This is useful for:
+- Visual documentation
+- Sharing widget appearance
+- Visual regression testing
 
 ### Code Quality
 
