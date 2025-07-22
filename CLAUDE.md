@@ -46,6 +46,13 @@ This document outlines the core principles and practices for developing this pro
 - **Be Proactive**: Continuously look for opportunities to refactor and improve the codebase for better organization and readability.
 - **Incremental Changes**: Refactor in small, testable steps. Run tests after each change and commit on success.
 
+### Step 6: Viewing the Widget
+
+- **Taking Screenshots**: To view the widget without Jupyter, use `python take_screenshot.py` from the project root.
+- **Manual Screenshot**: From the frontend directory, run `npm run demo` then `npm run screenshot` in another terminal.
+- **Screenshot Location**: Screenshots are saved to `frontend/screenshots/` with timestamps.
+- **Use Cases**: This is helpful for visual verification, documentation, and sharing the widget appearance.
+
 ## 3. Critical "Don'ts"
 
 - **DO NOT** manually edit the CLI help messages in `README.md`. They are auto-generated.
