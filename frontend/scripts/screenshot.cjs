@@ -35,13 +35,13 @@ async function takeScreenshot() {
       await page.keyboard.up("Control");
 
       // Wait for response
-      await page.waitForTimeout(2000);
+      await new Promise(resolve => setTimeout(resolve, 2000));
 
       // Click an action button
       const buttons = await page.$$('button:not([type="submit"])');
       if (buttons.length > 0) {
         await buttons[0].click();
-        await page.waitForTimeout(1500);
+        await new Promise(resolve => setTimeout(resolve, 1500));
       }
     }
 
@@ -86,7 +86,7 @@ async function takeScreenshot() {
     // Return the paths for programmatic use
     return {
       fullPage: fullPagePath,
-      widget: widgetPath,
+      widget: widgetPath || null,
     };
   } catch (error) {
     console.error("Error taking screenshot:", error);

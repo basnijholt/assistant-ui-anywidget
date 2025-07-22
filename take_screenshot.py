@@ -21,7 +21,7 @@ def start_demo_server():
     )
     
     # Wait for server to start
-    time.sleep(5)
+    time.sleep(8)
     return process
 
 
