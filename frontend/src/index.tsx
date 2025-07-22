@@ -8,6 +8,7 @@ import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism';
 function ChatWidget() {
   const [input, setInput] = useState('');
   const [chatHistory, setChatHistory] = useModelState('chat_history');
+  const [actionButtons] = useModelState('action_buttons');
   const model = useModel();
   const [renderKey, setRenderKey] = useState(0);
 
@@ -42,6 +43,13 @@ function ChatWidget() {
     }
 
     setInput('');
+  };
+
+  const handleActionButton = (buttonText: string) => {
+    if (model) {
+      model.send({ type: 'user_message', text: buttonText });
+      model.save_changes();
+    }
   };
 
   return (
@@ -108,6 +116,35 @@ function ChatWidget() {
           ))
         )}
       </div>
+
+      {/* Action buttons */}
+      {actionButtons && actionButtons.length > 0 && (
+        <div style={{
+          padding: '16px',
+          borderTop: '1px solid #eee',
+          display: 'flex',
+          gap: '8px',
+          flexWrap: 'wrap'
+        }}>
+          {actionButtons.map((buttonText: string, index: number) => (
+            <button
+              key={index}
+              onClick={() => handleActionButton(buttonText)}
+              style={{
+                padding: '8px 16px',
+                backgroundColor: '#007bff',
+                color: 'white',
+                border: 'none',
+                borderRadius: '4px',
+                cursor: 'pointer',
+                fontSize: '14px'
+              }}
+            >
+              {buttonText}
+            </button>
+          ))}
+        </div>
+      )}
 
       <form onSubmit={handleSubmit} style={{
         padding: '16px',

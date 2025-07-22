@@ -12,6 +12,7 @@ class AgentWidget(anywidget.AnyWidget):
     # Widget state synchronized between Python and JavaScript
     message = traitlets.Unicode("").tag(sync=True)
     chat_history = traitlets.List([]).tag(sync=True)
+    action_buttons = traitlets.List([]).tag(sync=True)  # List of button labels to display
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -42,3 +43,11 @@ class AgentWidget(anywidget.AnyWidget):
     def clear_chat_history(self):
         """Clear the chat history."""
         self.chat_history = []
+    
+    def set_action_buttons(self, buttons: list[str]):
+        """Set action buttons to display. Each button will send its text when clicked."""
+        self.action_buttons = buttons
+    
+    def clear_action_buttons(self):
+        """Clear all action buttons."""
+        self.action_buttons = []
