@@ -1,16 +1,15 @@
-#!/usr/bin/env python3
 """Comprehensive test for the widget functionality."""
 
-import sys
 import os
+import sys
 import tempfile
 
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "python"))
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "python"))  # noqa: PTH118, PTH120
 
 from agent_widget import AgentWidget
 
 
-def test_widget_comprehensive():
+def test_widget_comprehensive() -> None:  # noqa: PLR0915
     """Test the widget thoroughly."""
     print("=== Comprehensive Widget Test ===")
 
@@ -51,16 +50,17 @@ def test_widget_comprehensive():
     try:
         widget._handle_message(None, {"type": "user_message", "text": "Hello"})
         print("   ✓ Basic message handling works")
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001
         print(f"   ✗ Message handling failed: {e}")
 
     # Test message with special characters
     try:
         widget._handle_message(
-            None, {"type": "user_message", "text": "Hello 🌟 World!"}
+            None,
+            {"type": "user_message", "text": "Hello 🌟 World!"},
         )
         print("   ✓ Unicode message handling works")
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001
         print(f"   ✗ Unicode message handling failed: {e}")
 
     # Test 4: Widget state

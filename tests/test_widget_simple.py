@@ -1,15 +1,14 @@
-#!/usr/bin/env python3
 """Simple test to verify the widget works."""
 
-import sys
 import os
+import sys
 
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "python"))
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "python"))  # noqa: PTH118, PTH120
 
 from agent_widget import AgentWidget
 
 
-def test_widget():
+def test_widget() -> None:
     """Test the widget thoroughly."""
     print("=== Widget Test ===")
 
@@ -35,7 +34,7 @@ def test_widget():
         # Simulate receiving a message
         widget._handle_message(None, {"type": "user_message", "text": "Hello"})
         print("   ✓ Message handling works")
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001
         print(f"   ✗ Message handling failed: {e}")
 
     print("\n=== Widget is ready! ===")
