@@ -14,18 +14,18 @@
             background-color: #f5f5f5;
             min-height: 100vh;
         }
-        
+
         h1 {
             text-align: center;
             color: #333;
             margin-bottom: 30px;
         }
-        
+
         .container {
             max-width: 800px;
             margin: 0 auto;
         }
-        
+
         .widget-container {
             background: white;
             padding: 20px;
@@ -200,15 +200,15 @@
 
             return React.createElement('div', { className: 'chat-widget' },
                 React.createElement('div', { className: 'messages-container' },
-                    messages.length === 0 
+                    messages.length === 0
                         ? React.createElement('div', { className: 'empty-state' }, 'Start a conversation...')
-                        : messages.map((msg, i) => 
-                            React.createElement('div', { 
-                                key: i, 
-                                className: `message ${msg.role}` 
+                        : messages.map((msg, i) =>
+                            React.createElement('div', {
+                                key: i,
+                                className: `message ${msg.role}`
                             },
                                 React.createElement('div', { className: 'message-bubble' },
-                                    React.createElement('div', { className: 'role-label' }, 
+                                    React.createElement('div', { className: 'role-label' },
                                         msg.role === 'user' ? 'You' : 'Assistant'
                                     ),
                                     msg.content
@@ -217,9 +217,9 @@
                         ),
                     React.createElement('div', { ref: messagesEndRef })
                 ),
-                React.createElement('form', { 
+                React.createElement('form', {
                     className: 'input-form',
-                    onSubmit: handleSubmit 
+                    onSubmit: handleSubmit
                 },
                     React.createElement('textarea', {
                         className: 'input-textarea',

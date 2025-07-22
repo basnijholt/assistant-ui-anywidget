@@ -4,13 +4,14 @@ Script to take screenshots of the Assistant UI Widget using Puppeteer.
 This allows Claude to view the widget's appearance.
 """
 
+import os
 import subprocess
 import sys
 import time
 from pathlib import Path
 
 
-def start_demo_server():
+def start_demo_server() -> subprocess.Popen[bytes]:
     """Start the demo server in the background."""
     print("Starting demo server...")
     process = subprocess.Popen(
@@ -19,55 +20,55 @@ def start_demo_server():
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
     )
-    
+
     # Wait for server to start
     time.sleep(8)
     return process
 
 
-def take_screenshot(add_demo_messages=True, interactive=False):
+def take_screenshot(add_demo_messages: bool = True, interactive: bool = False) -> bool:
     """Take a screenshot of the widget using Puppeteer."""
     env = {
         "DEMO_URL": "http://localhost:3000",
         "ADD_DEMO_MESSAGES": "true" if add_demo_messages else "false",
         "INTERACTIVE_SCREENSHOT": "true" if interactive else "false",
     }
-    
+
     print("Taking screenshot...")
     result = subprocess.run(
         ["npm", "run", "screenshot"],
         cwd=Path(__file__).parent / "frontend",
-        env={**subprocess.os.environ, **env},
+        env={**os.environ, **env},
         capture_output=True,
         text=True,
     )
-    
+
     if result.returncode != 0:
         print(f"Error taking screenshot: {result.stderr}")
         return False
-    
+
     print(result.stdout)
     return True
 
 
-def main():
+def main() -> None:
     """Main function to coordinate the screenshot process."""
     server_process = None
-    
+
     try:
         # Start the demo server
         server_process = start_demo_server()
-        
+
         # Take screenshots
         success = take_screenshot(add_demo_messages=True, interactive=True)
-        
+
         if success:
             print("\nScreenshots saved to frontend/screenshots/")
             print("You can now share these with Claude to view the widget!")
         else:
             print("\nFailed to take screenshots.")
             sys.exit(1)
-            
+
     except KeyboardInterrupt:
         print("\nInterrupted by user.")
     except Exception as e:
