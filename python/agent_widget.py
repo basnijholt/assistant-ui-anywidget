@@ -1,6 +1,9 @@
+"""AgentWidget module for creating interactive chat interfaces."""
+
+import pathlib
+
 import anywidget
 import traitlets
-import pathlib
 
 
 class AgentWidget(anywidget.AnyWidget):
@@ -14,11 +17,11 @@ class AgentWidget(anywidget.AnyWidget):
     chat_history = traitlets.List([]).tag(sync=True)
     action_buttons = traitlets.List([]).tag(sync=True)  # List of button labels to display
 
-    def __init__(self, **kwargs):
+    def __init__(self, **kwargs) -> None:  # noqa: ANN003
         super().__init__(**kwargs)
         self.on_msg(self._handle_message)
 
-    def _handle_message(self, _, content, buffers=None):
+    def _handle_message(self, _, content, buffers=None) -> None:  # noqa: ANN001, ARG002
         """Handle incoming messages from the frontend."""
         if content.get("type") == "user_message":
             user_text = content.get("text", "")
@@ -30,24 +33,24 @@ class AgentWidget(anywidget.AnyWidget):
             # Update the synchronized chat history
             self.chat_history = new_history
 
-    def add_message(self, role: str, content: str):
+    def add_message(self, role: str, content: str) -> None:
         """Add a message to the chat history from Python."""
         new_history = list(self.chat_history)
         new_history.append({"role": role, "content": content})
         self.chat_history = new_history
 
-    def get_chat_history(self):
+    def get_chat_history(self) -> list[dict[str, str]]:
         """Get the current chat history."""
         return list(self.chat_history)
 
-    def clear_chat_history(self):
+    def clear_chat_history(self) -> None:
         """Clear the chat history."""
         self.chat_history = []
-    
-    def set_action_buttons(self, buttons: list[str]):
+
+    def set_action_buttons(self, buttons: list[str]) -> None:
         """Set action buttons to display. Each button will send its text when clicked."""
         self.action_buttons = buttons
-    
-    def clear_action_buttons(self):
+
+    def clear_action_buttons(self) -> None:
         """Clear all action buttons."""
         self.action_buttons = []
