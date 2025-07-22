@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """Pytest-based test runner for all widget tests."""
 
 import os
@@ -6,13 +5,13 @@ import subprocess
 import sys
 
 
-def run_pytest_tests():
+def run_pytest_tests() -> bool:
     """Run all tests using pytest."""
     print("Assistant-UI Widget Test Suite (pytest)")
     print("=" * 50)
 
     # Change to the project root directory
-    project_root = os.path.dirname(os.path.dirname(__file__))
+    project_root = os.path.dirname(os.path.dirname(__file__))  # noqa: PTH120
     os.chdir(project_root)
 
     # Run pytest with verbose output
@@ -28,13 +27,14 @@ def run_pytest_tests():
 
     try:
         result = subprocess.run(cmd, capture_output=False, text=True, check=False)
-        return result.returncode == 0
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001
         print(f"Error running pytest: {e}")
         return False
+    else:
+        return result.returncode == 0
 
 
-def main():
+def main() -> int:
     """Main test runner."""
     success = run_pytest_tests()
 

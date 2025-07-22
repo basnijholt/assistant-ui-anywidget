@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """Test summary script to show pytest test results."""
 
 import os
@@ -6,13 +5,13 @@ import subprocess
 import sys
 
 
-def run_pytest_summary():
+def run_pytest_summary() -> bool:
     """Run pytest with summary output."""
     print("🧪 Assistant-UI Widget Test Suite Summary")
     print("=" * 50)
 
     # Change to the project root directory
-    project_root = os.path.dirname(os.path.dirname(__file__))
+    project_root = os.path.dirname(os.path.dirname(__file__))  # noqa: PTH120
     os.chdir(project_root)
 
     # Run pytest with summary
@@ -40,15 +39,18 @@ def run_pytest_summary():
 
 
 if __name__ == "__main__":
-    success = run_pytest_summary()
+    try:
+        success = run_pytest_summary()
 
-    if success:
-        print("\n✅ All pytest tests passed!")
-        print("\nTo run tests yourself:")
-        print("  uv run pytest                    # Run all tests")
-        print("  uv run pytest -v                 # Verbose output")
-        print("  uv run pytest --cov=python       # With coverage")
-    else:
-        print("\n❌ Some tests failed")
+        if success:
+            print("\n✅ All pytest tests passed!")
+            print("\nTo run tests yourself:")
+            print("  uv run pytest                    # Run all tests")
+            print("  uv run pytest -v                 # Verbose output")
+            print("  uv run pytest --cov=python       # With coverage")
+        else:
+            print("\n❌ Some tests failed")
 
-    sys.exit(0 if success else 1)
+        sys.exit(0 if success else 1)
+    except Exception:  # noqa: BLE001
+        sys.exit(1)

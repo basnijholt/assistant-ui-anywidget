@@ -1,15 +1,14 @@
-#!/usr/bin/env python3
 """Test the widget in a Jupyter notebook environment."""
 
 import os
 import sys
 
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "python"))
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "python"))  # noqa: PTH118, PTH120
 
 from agent_widget import AgentWidget
 
 
-def test_widget_in_notebook():
+def test_widget_in_notebook() -> object | None:
     """Test widget creation and display."""
     print("Creating AgentWidget...")
     widget = AgentWidget()
@@ -20,7 +19,10 @@ def test_widget_in_notebook():
 
     # Display the widget
     print("\nDisplaying widget...")
-    return widget
+    if __name__ == "__main__":
+        return widget
+    # For pytest, we don't return anything
+    return None
 
 
 if __name__ == "__main__":
@@ -34,6 +36,7 @@ if __name__ == "__main__":
     print("5. Run: widget")
 
     # For testing, we can also create a simple notebook file
+    # Note: This function is used both as a test and as a standalone script
     notebook_content = """
 {
  "cells": [
@@ -83,7 +86,7 @@ if __name__ == "__main__":
 }
 """
 
-    with open("test_widget.ipynb", "w") as f:
+    with open("test_widget.ipynb", "w") as f:  # noqa: PTH123
         f.write(notebook_content)
 
     print("\nCreated test_widget.ipynb for testing in Jupyter!")

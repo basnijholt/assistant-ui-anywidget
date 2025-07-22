@@ -10,13 +10,13 @@ import sys
 import pytest
 
 # Add the python module to the path
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "python"))
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "python"))  # noqa: PTH118, PTH120
 
 from agent_widget import AgentWidget
 
 
 @pytest.fixture
-def widget():
+def widget() -> AgentWidget:
     """Create a fresh widget instance for each test."""
     return AgentWidget()
 
@@ -24,12 +24,12 @@ def widget():
 class TestChatHistorySynchronization:
     """Test suite for chat history synchronization."""
 
-    def test_initial_empty_state(self, widget):
+    def test_initial_empty_state(self, widget: AgentWidget) -> None:
         """Test that widget starts with empty chat history."""
         assert widget.chat_history == []
         assert len(widget.chat_history) == 0
 
-    def test_add_message_python_api(self, widget):
+    def test_add_message_python_api(self, widget: AgentWidget) -> None:
         """Test adding messages using Python API."""
         # Add user message
         widget.add_message("user", "Hello from Python!")
@@ -39,11 +39,11 @@ class TestChatHistorySynchronization:
 
         # Add assistant message
         widget.add_message("assistant", "Hello back from the assistant!")
-        assert len(widget.chat_history) == 2
+        assert len(widget.chat_history) == 2  # noqa: PLR2004
         assert widget.chat_history[1]["role"] == "assistant"
         assert widget.chat_history[1]["content"] == "Hello back from the assistant!"
 
-    def test_get_chat_history(self, widget):
+    def test_get_chat_history(self, widget: AgentWidget) -> None:
         """Test getting chat history returns a copy."""
         widget.add_message("user", "Test message")
 
@@ -51,18 +51,18 @@ class TestChatHistorySynchronization:
         assert history == widget.chat_history
         assert history is not widget.chat_history  # Should be a copy
 
-    def test_clear_chat_history(self, widget):
+    def test_clear_chat_history(self, widget: AgentWidget) -> None:
         """Test clearing chat history."""
         widget.add_message("user", "Test message 1")
         widget.add_message("assistant", "Test response 1")
 
-        assert len(widget.chat_history) == 2
+        assert len(widget.chat_history) == 2  # noqa: PLR2004
 
         widget.clear_chat_history()
         assert len(widget.chat_history) == 0
         assert widget.chat_history == []
 
-    def test_direct_assignment(self, widget):
+    def test_direct_assignment(self, widget: AgentWidget) -> None:
         """Test directly assigning chat history."""
         new_history = [
             {"role": "user", "content": "Hello"},
@@ -70,11 +70,11 @@ class TestChatHistorySynchronization:
         ]
 
         widget.chat_history = new_history
-        assert len(widget.chat_history) == 2
+        assert len(widget.chat_history) == 2  # noqa: PLR2004
         assert widget.chat_history[0]["role"] == "user"
         assert widget.chat_history[1]["role"] == "assistant"
 
-    def test_ui_message_handling(self, widget):
+    def test_ui_message_handling(self, widget: AgentWidget) -> None:
         """Test handling messages from UI (JavaScript)."""
         # Simulate UI sending a message
         message_content = {"type": "user_message", "text": "Hello from UI"}
@@ -85,7 +85,7 @@ class TestChatHistorySynchronization:
         assert widget.chat_history[0]["role"] == "user"
         assert widget.chat_history[0]["content"] == "Hello from UI"
 
-    def test_ui_message_no_auto_response(self, widget):
+    def test_ui_message_no_auto_response(self, widget: AgentWidget) -> None:
         """Test that UI messages don't generate automatic responses."""
         # Send message from UI
         widget._handle_message(None, {"type": "user_message", "text": "Test"})
@@ -94,19 +94,19 @@ class TestChatHistorySynchronization:
         assert len(widget.chat_history) == 1
         assert widget.chat_history[0]["role"] == "user"
 
-    def test_multiple_ui_messages(self, widget):
+    def test_multiple_ui_messages(self, widget: AgentWidget) -> None:
         """Test handling multiple UI messages."""
         # Send multiple messages
         widget._handle_message(None, {"type": "user_message", "text": "First"})
         widget._handle_message(None, {"type": "user_message", "text": "Second"})
         widget._handle_message(None, {"type": "user_message", "text": "Third"})
 
-        assert len(widget.chat_history) == 3
+        assert len(widget.chat_history) == 3  # noqa: PLR2004
         assert widget.chat_history[0]["content"] == "First"
         assert widget.chat_history[1]["content"] == "Second"
         assert widget.chat_history[2]["content"] == "Third"
 
-    def test_mixed_message_sources(self, widget):
+    def test_mixed_message_sources(self, widget: AgentWidget) -> None:
         """Test mixing UI messages and Python API messages."""
         # Add from Python API
         widget.add_message("user", "From Python")
@@ -117,12 +117,12 @@ class TestChatHistorySynchronization:
         # Add from Python API again
         widget.add_message("assistant", "Response from Python")
 
-        assert len(widget.chat_history) == 3
+        assert len(widget.chat_history) == 3  # noqa: PLR2004
         assert widget.chat_history[0]["content"] == "From Python"
         assert widget.chat_history[1]["content"] == "From UI"
         assert widget.chat_history[2]["content"] == "Response from Python"
 
-    def test_message_format_validation(self, widget):
+    def test_message_format_validation(self, widget: AgentWidget) -> None:
         """Test that messages have correct format."""
         widget.add_message("user", "Test message")
         message = widget.chat_history[0]
@@ -133,7 +133,7 @@ class TestChatHistorySynchronization:
         assert message["role"] in ["user", "assistant"]
         assert isinstance(message["content"], str)
 
-    def test_empty_message_handling(self, widget):
+    def test_empty_message_handling(self, widget: AgentWidget) -> None:
         """Test handling empty messages."""
         # Send empty message from UI
         widget._handle_message(None, {"type": "user_message", "text": ""})
@@ -142,7 +142,7 @@ class TestChatHistorySynchronization:
         assert len(widget.chat_history) == 1
         assert widget.chat_history[0]["content"] == ""
 
-    def test_invalid_message_type(self, widget):
+    def test_invalid_message_type(self, widget: AgentWidget) -> None:
         """Test handling invalid message types."""
         # Send invalid message type
         widget._handle_message(None, {"type": "invalid_type", "text": "test"})
@@ -150,14 +150,14 @@ class TestChatHistorySynchronization:
         # Should not add any messages
         assert len(widget.chat_history) == 0
 
-    def test_clear_after_messages(self, widget):
+    def test_clear_after_messages(self, widget: AgentWidget) -> None:
         """Test clearing after adding messages."""
         # Add some messages
         widget.add_message("user", "Message 1")
         widget.add_message("assistant", "Response 1")
         widget._handle_message(None, {"type": "user_message", "text": "UI message"})
 
-        assert len(widget.chat_history) == 3
+        assert len(widget.chat_history) == 3  # noqa: PLR2004
 
         # Clear and verify
         widget.chat_history = []
@@ -167,19 +167,19 @@ class TestChatHistorySynchronization:
         widget.add_message("user", "New message")
         assert len(widget.chat_history) == 1
 
-    def test_large_chat_history(self, widget):
+    def test_large_chat_history(self, widget: AgentWidget) -> None:
         """Test handling large chat histories."""
         # Add 100 messages
         for i in range(100):
             widget.add_message("user", f"Message {i}")
 
-        assert len(widget.chat_history) == 100
+        assert len(widget.chat_history) == 100  # noqa: PLR2004
 
         # Verify all messages are present
         for i in range(100):
             assert widget.chat_history[i]["content"] == f"Message {i}"
 
-    def test_chat_history_persistence(self, widget):
+    def test_chat_history_persistence(self, widget: AgentWidget) -> None:
         """Test that chat history persists across operations."""
         # Add initial messages
         widget.add_message("user", "Persistent message")
@@ -191,13 +191,13 @@ class TestChatHistorySynchronization:
 
         # Original message should still be there
         assert widget.chat_history[0]["content"] == "Persistent message"
-        assert len(widget.chat_history) == 3
+        assert len(widget.chat_history) == 3  # noqa: PLR2004
 
 
 class TestUISimulation:
     """Test suite for UI simulation and synchronization."""
 
-    def test_ui_simulation_single_message(self, widget):
+    def test_ui_simulation_single_message(self, widget: AgentWidget) -> None:
         """Test simulating a single UI message."""
         # Simulate UI sending message
         before_count = len(widget.chat_history)
@@ -208,7 +208,7 @@ class TestUISimulation:
         assert widget.chat_history[-1]["role"] == "user"
         assert widget.chat_history[-1]["content"] == "Test message"
 
-    def test_ui_simulation_multiple_messages(self, widget):
+    def test_ui_simulation_multiple_messages(self, widget: AgentWidget) -> None:
         """Test simulating multiple UI messages."""
         messages = ["First", "Second", "Third"]
 
@@ -220,7 +220,7 @@ class TestUISimulation:
         for i, msg in enumerate(messages):
             assert widget.chat_history[i]["content"] == msg
 
-    def test_ui_simulation_with_existing_history(self, widget):
+    def test_ui_simulation_with_existing_history(self, widget: AgentWidget) -> None:
         """Test UI simulation with existing chat history."""
         # Add existing messages
         widget.add_message("user", "Existing message")
@@ -234,7 +234,7 @@ class TestUISimulation:
         assert len(widget.chat_history) == initial_count + 1
         assert widget.chat_history[-1]["content"] == "New UI message"
 
-    def test_ui_simulation_after_clear(self, widget):
+    def test_ui_simulation_after_clear(self, widget: AgentWidget) -> None:
         """Test UI simulation after clearing history."""
         # Add and clear messages
         widget.add_message("user", "To be cleared")
@@ -250,7 +250,7 @@ class TestUISimulation:
 class TestMessageIntegrity:
     """Test suite for message integrity and data consistency."""
 
-    def test_message_immutability(self, widget):
+    def test_message_immutability(self, widget: AgentWidget) -> None:
         """Test that messages don't get mutated unexpectedly."""
         original_message = {"role": "user", "content": "Original"}
         widget.chat_history = [original_message.copy()]
@@ -263,7 +263,7 @@ class TestMessageIntegrity:
         fresh_history = widget.get_chat_history()
         assert fresh_history[0]["content"] == "Modified"  # This is expected behavior
 
-    def test_concurrent_operations(self, widget):
+    def test_concurrent_operations(self, widget: AgentWidget) -> None:
         """Test concurrent-like operations on chat history."""
         # Simulate rapid operations
         widget.add_message("user", "Rapid 1")
@@ -271,13 +271,13 @@ class TestMessageIntegrity:
         widget.add_message("assistant", "Rapid 3")
         widget._handle_message(None, {"type": "user_message", "text": "Rapid 4"})
 
-        assert len(widget.chat_history) == 4
+        assert len(widget.chat_history) == 4  # noqa: PLR2004
 
         # Verify order is preserved
         contents = [msg["content"] for msg in widget.chat_history]
         assert contents == ["Rapid 1", "Rapid 2", "Rapid 3", "Rapid 4"]
 
-    def test_data_types_preservation(self, widget):
+    def test_data_types_preservation(self, widget: AgentWidget) -> None:
         """Test that data types are preserved correctly."""
         # Test various content types
         test_cases = [
@@ -303,7 +303,7 @@ class TestParametrizedCases:
     """Test suite demonstrating pytest parametrization."""
 
     @pytest.mark.parametrize("role", ["user", "assistant"])
-    def test_message_roles(self, widget, role):
+    def test_message_roles(self, widget: AgentWidget, role: str) -> None:
         """Test different message roles."""
         widget.add_message(role, f"Test message from {role}")
 
@@ -312,7 +312,7 @@ class TestParametrizedCases:
         assert widget.chat_history[0]["content"] == f"Test message from {role}"
 
     @pytest.mark.parametrize("content", ["", "short", "a" * 1000, "🚀 Unicode test"])
-    def test_message_content_types(self, widget, content):
+    def test_message_content_types(self, widget: AgentWidget, content: str) -> None:
         """Test different content types."""
         widget.add_message("user", content)
 
@@ -321,7 +321,7 @@ class TestParametrizedCases:
         assert isinstance(widget.chat_history[0]["content"], str)
 
     @pytest.mark.parametrize("message_count", [1, 5, 10, 100])
-    def test_multiple_messages(self, widget, message_count):
+    def test_multiple_messages(self, widget: AgentWidget, message_count: int) -> None:
         """Test adding multiple messages."""
         for i in range(message_count):
             widget.add_message("user", f"Message {i}")
@@ -337,7 +337,7 @@ class TestParametrizedCases:
 class TestPerformance:
     """Test suite for performance and stress testing."""
 
-    def test_large_message_batch(self, widget):
+    def test_large_message_batch(self, widget: AgentWidget) -> None:
         """Test adding a large batch of messages."""
         batch_size = 1000
 
@@ -350,7 +350,7 @@ class TestPerformance:
         assert widget.chat_history[0]["content"] == "Batch message 0"
         assert widget.chat_history[-1]["content"] == f"Batch message {batch_size - 1}"
 
-    def test_rapid_ui_messages(self, widget):
+    def test_rapid_ui_messages(self, widget: AgentWidget) -> None:
         """Test rapid UI message simulation."""
         message_count = 100
 
@@ -366,7 +366,7 @@ class TestPerformance:
         for i in range(message_count):
             assert widget.chat_history[i]["content"] == f"Rapid UI {i}"
 
-    def test_alternating_sources(self, widget):
+    def test_alternating_sources(self, widget: AgentWidget) -> None:
         """Test alternating between Python API and UI messages."""
         total_messages = 100
 

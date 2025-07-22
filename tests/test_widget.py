@@ -1,16 +1,15 @@
-#!/usr/bin/env python3
 """Test script for the AgentWidget."""
 
 import os
 import pathlib
 import sys
 
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "python"))
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "python"))  # noqa: PTH118, PTH120
 
 from agent_widget import AgentWidget
 
 
-def test_widget_creation():
+def test_widget_creation() -> object:
     """Test that we can create a widget instance."""
     widget = AgentWidget()
     print("✓ Widget created successfully")

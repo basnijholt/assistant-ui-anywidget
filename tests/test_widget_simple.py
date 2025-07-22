@@ -48,8 +48,6 @@ def test_widget() -> None:
     print("   widget = AgentWidget()")
     print("   widget")
 
-    return widget
-
 
 if __name__ == "__main__":
-    widget = test_widget()
+    test_widget()

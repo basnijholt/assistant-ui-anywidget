@@ -1,7 +1,5 @@
 """Automatic test for the widget using nbconvert."""
 
-"""Automatic test for the widget using nbconvert."""
-
 import json
 import subprocess
 import sys
@@ -14,7 +12,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent / "python"))
 
 def create_test_notebook() -> dict:
     """Create a test notebook that uses the widget."""
-    notebook = {
+    return {
         "cells": [
             {
                 "cell_type": "code",
@@ -70,7 +68,6 @@ def create_test_notebook() -> dict:
         "nbformat": 4,
         "nbformat_minor": 4,
     }
-    return notebook
 
 
 def run_automatic_test() -> bool:
@@ -88,15 +85,15 @@ def run_automatic_test() -> bool:
         print(
             f"   ✓ ESM type: {'bundled JS' if widget._esm.startswith('var') else 'file path'}",
         )
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001
         print(f"   ✗ Widget creation failed: {e}")
         return False
 
     # Test 2: Check built JS file
     print("\n2. Testing built JavaScript...")
-    frontend_js = str(Path(__file__).parent / "frontend" / "dist" / "index.js")
-    if os.path.exists(frontend_js):
-        with open(frontend_js) as f:
+    frontend_js = Path(__file__).parent / "frontend" / "dist" / "index.js"
+    if frontend_js.exists():
+        with frontend_js.open() as f:
             content = f.read()
 
         # Check if React is bundled (not imported)
@@ -143,13 +140,12 @@ def run_automatic_test() -> bool:
             return False
 
         # Clean up
-        os.unlink(notebook_path)
+        Path(notebook_path).unlink()
         executed_path = notebook_path.replace(".ipynb", "_executed.ipynb")
-        executed_path_obj = Path(executed_path)
-        if executed_path_obj.exists():
-            executed_path_obj.unlink()
+        if Path(executed_path).exists():
+            Path(executed_path).unlink()
 
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001
         print(f"   ✗ Notebook test failed: {e}")
         return False
 
