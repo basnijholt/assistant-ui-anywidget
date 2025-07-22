@@ -48,7 +48,7 @@
     "vitest": "^3.2.4"
   },
   "dependencies": {
-    "@anywidget/react": "^0.1.0",
+    "@anywidget/react": "^0.2.0",
     "@assistant-ui/react": "^0.10.26",
     "@assistant-ui/react-markdown": "^0.10.6",
     "@types/react-syntax-highlighter": "^15.5.13",
