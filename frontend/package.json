@@ -20,7 +20,6 @@
     "preinstall": "npx only-allow npm",
     "postinstall": "npm run type-check",
     "demo": "node scripts/serve-demo.cjs",
-    "demo:vite": "vite --config vite.demo.config.ts",
     "screenshot": "node scripts/screenshot.cjs",
     "screenshot:demo": "npm run demo & sleep 5 && npm run screenshot && kill $!"
   },

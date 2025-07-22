@@ -3,7 +3,7 @@ const fs = require('fs');
 const path = require('path');
 
 const PORT = 3000;
-const HTML_FILE = path.join(__dirname, '..', 'demo-static.html');
+const HTML_FILE = path.join(__dirname, '..', 'demo.html');
 
 const server = http.createServer((req, res) => {
   if (req.url === '/' || req.url === '/index.html') {
