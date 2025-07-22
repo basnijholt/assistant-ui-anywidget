@@ -16,28 +16,33 @@ This document outlines the core principles and practices for developing this pro
 ## 2. Workflow
 
 ### Step 1: Understand the Context
+
 - **Read the Plan**: Always start by reading `PLAN.md` for the current task.
 - **Explore the Codebase**: List existing files and read the `README.md` to understand the project's structure and purpose.
 - **Consult Documentation**: Review the Crew AI documentation (https://docs.crewai.com/llms-full.txt and https://docs.crewai.com/llms.txt) to understand agent capabilities.
 
 ### Step 2: Environment & Dependencies
+
 - **Environment Setup**: Use `uv sync --all-extras` to install all dependencies and `source .venv/bin/activate` to activate the virtual environment.
 - **Adding Packages**: Use `uv add <package_name>` for new dependencies or `uv add --dev <package_name>` for development-only packages.
 
 ### Step 3: Development & Git
+
 - **Check for Changes**: Before starting, review the latest changes from the main branch with `git diff origin/main | cat`. Make sure to use `--no-pager`, or pipe the output to `cat`.
 - **Commit Frequently**: Make small, frequent commits.
 - **Atomic Commits**: Ensure each commit corresponds to a tested, working state.
 - **Targeted Adds**: **NEVER** use `git add .`. Always add files individually (`git add <filename>`) to prevent committing unrelated changes.
 
 ### Step 4: Testing & Quality
+
 - **Test Before Committing**: **NEVER** claim a task is complete without running `pytest` to ensure all tests pass.
 - **Run Pre-commit Hooks**: Always run `pre-commit run --all-files` before committing to enforce code style and quality.
 - **Handle Linter Issues**:
-    - **False Positives**: The linter may incorrectly flag issues in `pyproject.toml`; these can be ignored.
-    - **Test-Related Errors**: If a pre-commit fix breaks a test (e.g., by removing an unused but necessary fixture), suppress the warning with a `# noqa: <error_code>` comment.
+  - **False Positives**: The linter may incorrectly flag issues in `pyproject.toml`; these can be ignored.
+  - **Test-Related Errors**: If a pre-commit fix breaks a test (e.g., by removing an unused but necessary fixture), suppress the warning with a `# noqa: <error_code>` comment.
 
 ### Step 5: Refactoring
+
 - **Be Proactive**: Continuously look for opportunities to refactor and improve the codebase for better organization and readability.
 - **Incremental Changes**: Refactor in small, testable steps. Run tests after each change and commit on success.
 

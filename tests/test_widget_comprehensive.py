@@ -25,7 +25,7 @@ def test_widget_comprehensive() -> None:  # noqa: PLR0915
 
     # Check bundle size
     bundle_size = len(js_content)
-    print(f"   ✓ Bundle size: {bundle_size:,} bytes ({bundle_size/1024:.1f}KB)")
+    print(f"   ✓ Bundle size: {bundle_size:,} bytes ({bundle_size / 1024:.1f}KB)")
 
     # Check for common issues
     if "process.env.NODE_ENV" in js_content:

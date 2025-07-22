@@ -343,9 +343,9 @@ def run_all_tests() -> bool:
     passed_tests = 0
 
     for test_class in test_classes:
-        print(f"\n{'='*60}")
+        print(f"\n{'=' * 60}")
         print(f"Running {test_class.__name__}")
-        print(f"{'='*60}")
+        print(f"{'=' * 60}")
 
         instance = test_class()
         methods = [method for method in dir(instance) if method.startswith("test_")]
@@ -360,9 +360,9 @@ def run_all_tests() -> bool:
             except Exception as e:  # noqa: BLE001
                 print(f"✗ {method_name}: {e}")
 
-    print(f"\n{'='*60}")
+    print(f"\n{'=' * 60}")
     print(f"TEST RESULTS: {passed_tests}/{total_tests} passed")
-    print(f"{'='*60}")
+    print(f"{'=' * 60}")
 
     if passed_tests == total_tests:
         print("🎉 All tests passed!")
