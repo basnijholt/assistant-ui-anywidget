@@ -1,14 +1,14 @@
 #!/usr/bin/env python3
 """Test runner for all widget tests."""
 
-import os
 import subprocess
 import sys
+from pathlib import Path
 
 
-def run_test(test_file):
+def run_test(test_file: str) -> bool:
     """Run a single test file."""
-    test_path = os.path.join(os.path.dirname(__file__), test_file)
+    test_path = Path(__file__).parent / test_file
     print(f"\n{'='*50}")
     print(f"Running {test_file}")
     print(f"{'='*50}")
@@ -18,7 +18,7 @@ def run_test(test_file):
             [sys.executable, test_path],
             capture_output=True,
             text=True,
-            cwd=os.path.dirname(__file__),
+            cwd=Path(__file__).parent,
             check=False,
         )
 
@@ -33,13 +33,14 @@ def run_test(test_file):
             if result.stdout:
                 print("STDOUT:", result.stdout)
 
-        return result.returncode == 0
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001
         print(f"✗ {test_file} ERROR: {e}")
         return False
+    else:
+        return result.returncode == 0
 
 
-def main():
+def main() -> int:
     """Run all tests."""
     print("Assistant-UI Widget Test Suite")
     print("=" * 50)
