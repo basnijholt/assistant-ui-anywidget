@@ -1,0 +1,13 @@
+{
+  "recommendations": [
+    "esbenp.prettier-vscode",
+    "ms-python.python",
+    "ms-python.pylint",
+    "charliermarsh.ruff",
+    "dbaeumer.vscode-eslint",
+    "bradlc.vscode-tailwindcss",
+    "ms-toolsai.jupyter",
+    "ms-vscode.vscode-typescript-next",
+    "ms-vscode.vscode-json"
+  ]
+}
