@@ -72,6 +72,7 @@ widget
 ## Development
 
 ### Frontend Development
+
 ```bash
 cd frontend
 npm run dev      # Watch mode with hot reload
@@ -79,6 +80,7 @@ npm run build    # Production build
 ```
 
 ### Testing
+
 ```bash
 # Run all tests with pytest
 uv run pytest
@@ -100,6 +102,7 @@ uv run jupyter notebook tests/test_widget.ipynb
 ```
 
 ### Python Development
+
 ```bash
 # Install dependencies
 uv sync
@@ -128,16 +131,19 @@ uv run python tests/test_widget_simple.py
 ## Troubleshooting
 
 **Widget not displaying?**
+
 - Ensure frontend is built: `cd frontend && npm run build`
 - Check imports: `sys.path.insert(0, 'python')`
 - Verify bundle exists: `ls frontend/dist/index.js`
 
 **Import errors?**
+
 - All dependencies bundled (no external imports)
 - Bundle size: ~203KB (includes React)
 - Works in any Jupyter environment
 
 **Need more features?**
+
 - Add AI agent integration (OpenAI, LangChain)
 - Implement streaming responses
 - Add file upload support

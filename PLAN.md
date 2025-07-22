@@ -5,6 +5,7 @@
 We have successfully implemented a working Assistant-UI AnyWidget integration! Here's what's been accomplished:
 
 ### **Core Features Implemented:**
+
 - ✅ **Basic Python Widget** (`python/agent_widget.py`)
 - ✅ **React Frontend** (`frontend/src/index.tsx`)
 - ✅ **Bidirectional Communication** (Python ↔ JavaScript)
@@ -15,6 +16,7 @@ We have successfully implemented a working Assistant-UI AnyWidget integration! H
 - ✅ **Test Suite** (comprehensive testing in `tests/`)
 
 ### **Current Architecture:**
+
 ```
 ├── python/
 │   ├── __init__.py
@@ -28,6 +30,7 @@ We have successfully implemented a working Assistant-UI AnyWidget integration! H
 ```
 
 ### **Working Example:**
+
 ```python
 # In Jupyter notebook:
 import sys
@@ -45,24 +48,28 @@ widget  # Displays working chat interface
 Now that we have a solid foundation, here are potential improvements:
 
 ### **Priority 1: AI Agent Integration**
+
 - **OpenAI Integration**: Add real AI responses instead of echoing
 - **Streaming Responses**: Implement token-by-token streaming
 - **LangChain Support**: Add agent framework integration
 - **Multiple Providers**: Support various AI APIs (Anthropic, OpenAI, etc.)
 
 ### **Priority 2: Enhanced UI Features**
+
 - **File Uploads**: Support document attachments
 - **Rich Formatting**: Better message rendering (markdown, code blocks)
 - **Typing Indicators**: Show when AI is thinking
 - **Message History**: Persist conversations between sessions
 
 ### **Priority 3: Advanced Features**
+
 - **Tool Calling**: Support function/tool execution
 - **Custom Themes**: Configurable styling
 - **Export Conversations**: Save chat history
 - **Multiple Conversations**: Thread management
 
 ### **Priority 4: Developer Experience**
+
 - **PyPI Package**: Distribute as installable package
 - **Documentation**: Comprehensive API docs
 - **Examples**: Sample implementations
@@ -73,12 +80,14 @@ Now that we have a solid foundation, here are potential improvements:
 ## 📋 Implementation Guide for New Features
 
 ### **Adding AI Integration:**
+
 1. Modify `python/agent_widget.py` to replace echo with real AI calls
 2. Add streaming support in `_handle_message` method
 3. Update frontend to handle streaming responses
 4. Add API key configuration
 
 ### **Example: OpenAI Integration**
+
 ```python
 # In agent_widget.py
 import openai
@@ -103,6 +112,7 @@ async def _handle_message(self, _, content, buffers=None):
 ```
 
 ### **Adding File Upload:**
+
 1. Update React component to handle file selection
 2. Add file processing in Python widget
 3. Support common file types (PDF, images, text)
@@ -112,12 +122,14 @@ async def _handle_message(self, _, content, buffers=None):
 ## 🏗️ Technical Decisions Made
 
 ### **Architecture Choices:**
+
 - **Bundled React**: Chose to bundle React instead of external imports for compatibility
 - **Simple Communication**: Used JSON messages for Python ↔ JavaScript communication
 - **Echo Implementation**: Started with message echoing for testing and development
 - **Vite Build**: Selected Vite for modern, fast frontend builds
 
 ### **What Works Well:**
+
 - Clean separation between Python and JavaScript
 - Reliable message passing
 - Easy to test and develop
@@ -125,6 +137,7 @@ async def _handle_message(self, _, content, buffers=None):
 - Minimal dependencies
 
 ### **Lessons Learned:**
+
 - Browser compatibility requires careful dependency management
 - AnyWidget works best with bundled JavaScript
 - Simple architectures are easier to debug and extend
@@ -135,11 +148,13 @@ async def _handle_message(self, _, content, buffers=None):
 ## 📚 Resources for Extension
 
 ### **Documentation:**
+
 - [AnyWidget Documentation](https://anywidget.dev/)
 - [Assistant-UI GitHub](https://github.com/assistant-ui/assistant-ui)
 - [React AnyWidget Package](https://www.npmjs.com/package/@anywidget/react)
 
 ### **AI Integration Examples:**
+
 - [OpenAI Python SDK](https://github.com/openai/openai-python)
 - [LangChain Documentation](https://python.langchain.com/docs/)
 - [Assistant-UI LangGraph Tutorial](https://www.assistant-ui.com/docs/runtimes/langgraph/)

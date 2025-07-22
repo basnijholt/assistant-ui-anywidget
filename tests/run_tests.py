@@ -9,9 +9,9 @@ from pathlib import Path
 def run_test(test_file: str) -> bool:
     """Run a single test file."""
     test_path = Path(__file__).parent / test_file
-    print(f"\n{'='*50}")
+    print(f"\n{'=' * 50}")
     print(f"Running {test_file}")
-    print(f"{'='*50}")
+    print(f"{'=' * 50}")
 
     try:
         result = subprocess.run(
@@ -57,9 +57,9 @@ def main() -> int:
         success = run_test(test)
         results.append((test, success))
 
-    print(f"\n{'='*50}")
+    print(f"\n{'=' * 50}")
     print("TEST SUMMARY")
-    print(f"{'='*50}")
+    print(f"{'=' * 50}")
 
     passed = sum(1 for _, success in results if success)
     total = len(results)
