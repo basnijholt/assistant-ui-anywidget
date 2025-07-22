@@ -130,6 +130,7 @@ npm run screenshot # Take screenshot (in another terminal)
 ```
 
 Screenshots are saved to `frontend/screenshots/`. This is useful for:
+
 - Visual documentation
 - Sharing widget appearance
 - Visual regression testing

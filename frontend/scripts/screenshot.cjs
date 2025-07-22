@@ -75,7 +75,7 @@ async function takeScreenshot() {
     if (process.env.INTERACTIVE_SCREENSHOT === "true") {
       // Focus on textarea
       await page.focus('textarea[placeholder*="Type a message"]');
-      
+
       // Take screenshot with focused input
       const focusedPath = path.join(screenshotsDir, `widget-focused-${timestamp}.png`);
       await widgetElement.screenshot({

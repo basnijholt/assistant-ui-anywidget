@@ -1,9 +1,9 @@
 /**
  * Assistant UI Widget for Jupyter/anywidget
- * 
+ *
  * This is the main widget component that integrates with Python via anywidget.
  * It provides a chat interface with markdown support and syntax highlighting.
- * 
+ *
  * State is synchronized with Python through:
  * - useModelState: For reactive state (chat_history, action_buttons)
  * - useModel: For sending messages back to Python
