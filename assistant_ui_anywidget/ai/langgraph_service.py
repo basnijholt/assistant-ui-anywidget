@@ -180,15 +180,31 @@ def approval_node(state: AgentState) -> Dict[str, Any]:
     if not state.messages:
         return {}
 
-    last_message = state.messages[-1]
+    # Find the most recent AIMessage with tool calls that needs approval
+    ai_message_with_tools = None
+    for message in reversed(state.messages):
+        if isinstance(message, AIMessage) and message.tool_calls:
+            # Check if any tool call is execute_code
+            for tool_call in message.tool_calls:
+                if tool_call["name"] == "execute_code":
+                    ai_message_with_tools = message
+                    break
+            if ai_message_with_tools:
+                break
+
+    # If no AIMessage with execute_code tool calls found, something is wrong
+    if not ai_message_with_tools:
+        logger.warning(
+            "Approval node called but no AIMessage with execute_code tool calls found"
+        )
+        return {"pending_approval": False}
 
     # Extract code to be executed
     code_blocks = []
-    if isinstance(last_message, AIMessage) and last_message.tool_calls:
-        for tool_call in last_message.tool_calls:
-            if tool_call["name"] == "execute_code":
-                code = tool_call["args"]["code"]
-                code_blocks.append(code)
+    for tool_call in ai_message_with_tools.tool_calls:
+        if tool_call["name"] == "execute_code":
+            code = tool_call["args"]["code"]
+            code_blocks.append(code)
 
     # Create approval message
     approval_msg = "Approve code execution?\n\n"

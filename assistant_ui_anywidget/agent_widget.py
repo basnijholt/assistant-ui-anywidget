@@ -8,7 +8,7 @@ import traitlets
 
 from .kernel_interface import KernelInterface, KernelContext, AIConfig
 from .simple_handlers import SimpleHandlers
-from .ai import LangGraphAIService
+from .ai.pydantic_ai_service import PydanticAIService
 
 
 class AgentWidget(anywidget.AnyWidget):
@@ -49,7 +49,7 @@ class AgentWidget(anywidget.AnyWidget):
         self.handlers = SimpleHandlers(self.kernel)
 
         # Initialize AI service only if AI config is provided
-        self.ai_service: Optional[LangGraphAIService] = None
+        self.ai_service: Optional[PydanticAIService] = None
         if ai_config:
             # Convert dict to AIConfig if needed
             if isinstance(ai_config, dict):
@@ -71,8 +71,8 @@ class AgentWidget(anywidget.AnyWidget):
 
             self.ai_config = config.to_dict()
 
-            # Always use LangGraph service
-            self.ai_service = LangGraphAIService(
+            # Always use Pydantic AI service
+            self.ai_service = PydanticAIService(
                 kernel=self.kernel,
                 model=config.model,
                 provider=config.provider,

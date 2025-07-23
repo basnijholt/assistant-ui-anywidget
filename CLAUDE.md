@@ -36,6 +36,7 @@ This document outlines the core principles and practices for developing this pro
 ### Step 4: Testing & Quality
 
 - **Test Before Committing**: **NEVER** claim a task is complete without running `pytest` to ensure all tests pass.
+- **Real AI Integration Testing**: Always run `python test_real_ai_integration.py` to test with actual AI providers (uses cheap Gemini 2.5 Flash by default). This catches integration issues that mock tests might miss.
 - **Run Pre-commit Hooks**: Always run `pre-commit run --all-files` before committing to enforce code style and quality.
 - **Handle Linter Issues**:
   - **False Positives**: The linter may incorrectly flag issues in `pyproject.toml`; these can be ignored.
