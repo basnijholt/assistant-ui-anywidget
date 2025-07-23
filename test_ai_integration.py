@@ -4,7 +4,7 @@
 import sys
 
 # This assumes the package is properly installed
-from assistant_ui_anywidget.enhanced_agent_widget import EnhancedAgentWidget
+from assistant_ui_anywidget import AgentWidget
 
 
 def test_ai_integration() -> None:
@@ -12,7 +12,7 @@ def test_ai_integration() -> None:
     print("Testing AI integration...")
 
     # Create widget with mock AI (no API key needed)
-    widget = EnhancedAgentWidget(
+    widget = AgentWidget(
         ai_config={
             "require_approval": False,
         }
@@ -33,7 +33,7 @@ def test_ai_integration() -> None:
 
     print(f"✓ AI service initialized: {widget.ai_service is not None}")
     print(
-        f"✓ AI provider: {widget.ai_service.llm._llm_type if hasattr(widget.ai_service.llm, '_llm_type') else 'unknown'}"
+        f"✓ AI provider: {widget.ai_service.llm._llm_type if widget.ai_service and hasattr(widget.ai_service.llm, '_llm_type') else 'unknown'}"
     )
 
     # Check logging
