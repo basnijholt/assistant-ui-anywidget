@@ -6,6 +6,7 @@ from dataclasses import dataclass
 from typing import Any, Dict, List, Optional, Union
 import logging
 
+from dotenv import load_dotenv
 from langchain.chat_models import init_chat_model
 from langchain_core.language_models import BaseLanguageModel
 from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
@@ -14,6 +15,9 @@ from langgraph.checkpoint.memory import MemorySaver
 
 from ..kernel_interface import KernelInterface
 from .agent import create_kernel_agent
+
+# Load environment variables from .env file
+load_dotenv()
 
 logger = logging.getLogger(__name__)
 
@@ -74,26 +78,52 @@ class AIService:
         provider: Optional[str] = None,
         **kwargs: Any,
     ) -> BaseLanguageModel:
-        """Initialize the language model with fallbacks."""
-        # Try to detect from environment if not specified
-        if not model and not provider:
-            if os.getenv("OPENAI_API_KEY"):
-                provider = "openai"
-                model = "gpt-3.5-turbo"
-            elif os.getenv("ANTHROPIC_API_KEY"):
-                provider = "anthropic"
-                model = "claude-3-haiku-20240307"
-            elif os.getenv("GOOGLE_API_KEY"):
-                provider = "google_genai"
-                model = "gemini-pro"
+        """Initialize the language model with automatic provider detection.
+        
+        If no provider is specified, automatically detects available API keys
+        and selects the best available provider in order of preference:
+        1. OpenAI (GPT-4 if available)
+        2. Anthropic (Claude)
+        3. Google (Gemini)
+        """
+        # Detect available providers
+        available_providers = []
+        if os.getenv("OPENAI_API_KEY"):
+            available_providers.append(("openai", "gpt-4"))
+        if os.getenv("ANTHROPIC_API_KEY"):
+            available_providers.append(("anthropic", "claude-3-opus-20240229"))
+        if os.getenv("GOOGLE_API_KEY"):
+            available_providers.append(("google_genai", "gemini-1.5-flash"))
+        
+        # If provider/model not specified, auto-select based on availability
+        if not provider:
+            if available_providers:
+                provider, default_model = available_providers[0]
+                if not model:
+                    model = default_model
+                logger.info(f"Auto-detected {provider} provider with {len(available_providers)} provider(s) available")
             else:
-                # Fallback to a mock model
+                # No API keys found, fall back to mock
                 logger.warning(
                     "No AI provider configured. Set OPENAI_API_KEY, ANTHROPIC_API_KEY, "
                     "or GOOGLE_API_KEY to use an AI model."
                 )
                 from .mock import MockLLM
                 return MockLLM()
+        
+        # If only model specified, try to infer provider
+        elif not provider and model:
+            if "gpt" in model.lower():
+                provider = "openai"
+            elif "claude" in model.lower():
+                provider = "anthropic"
+            elif "gemini" in model.lower():
+                provider = "google_genai"
+            else:
+                # Try first available provider
+                if available_providers:
+                    provider = available_providers[0][0]
+                    logger.info(f"Using {provider} for model {model}")
         
         try:
             return init_chat_model(model=model, model_provider=provider, **kwargs)

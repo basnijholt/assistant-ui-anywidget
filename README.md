@@ -4,7 +4,7 @@
 [![MIT License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![Tests](https://github.com/basnijholt/assistant-ui-anywidget/workflows/CI/badge.svg)](https://github.com/basnijholt/assistant-ui-anywidget/actions)
 
-A production-ready interactive chat widget integrating Assistant-UI with AnyWidget for Jupyter notebooks, featuring comprehensive testing, modern tooling, and CI/CD automation.
+A production-ready AI-powered assistant widget with Jupyter kernel access, featuring automatic provider detection, comprehensive testing, and modern tooling.
 
 ## Quick Start
 
@@ -25,32 +25,69 @@ pytest
 cd frontend && npm test
 ```
 
+## AI Setup (Optional)
+
+The widget automatically detects and uses available AI providers. Create a `.env` file:
+
+```bash
+# Copy the example file
+cp .env.example .env
+
+# Edit .env and add any API key:
+OPENAI_API_KEY=sk-...          # For GPT-4, GPT-3.5
+ANTHROPIC_API_KEY=sk-ant-...    # For Claude 3 models
+GOOGLE_API_KEY=...              # For Gemini Pro
+```
+
+The widget will:
+- Automatically load API keys from `.env` 
+- Use the first available provider (OpenAI → Anthropic → Google)
+- Fall back to a helpful mock AI if no keys are set
+- Work perfectly with just one provider (e.g., only Google)
+
 ## Usage in Jupyter
 
 ```bash
 # Start Jupyter notebook
 uv run jupyter notebook
 
-# In a new notebook:
-import sys
-sys.path.insert(0, 'python')
-from agent_widget import AgentWidget
+# Open demo_kernel_assistant.ipynb or create a new notebook:
+from assistant_ui_anywidget import EnhancedAgentWidget
 
-# Create and display the widget
-widget = AgentWidget()
+# Create the AI-powered widget (auto-detects providers)
+widget = EnhancedAgentWidget()
 widget
+
+# Or with specific configuration:
+widget = EnhancedAgentWidget(
+    ai_config={
+        'provider': 'google_genai',  # Force specific provider
+        'model': 'gemini-pro',       # Choose model
+        'require_approval': False,    # Auto-approve code execution
+    }
+)
 ```
 
 ## Features
 
+### AI Capabilities
+- ✅ **Multi-provider AI support** - OpenAI, Anthropic, Google (automatic detection)
+- ✅ **Automatic provider selection** - Uses any available API key
+- ✅ **Environment variable loading** - Reads from `.env` files via python-dotenv
+- ✅ **Kernel-aware AI** - Can inspect variables and execute code
+- ✅ **Natural language interface** - Ask questions in plain English
+- ✅ **Fallback mock AI** - Works without API keys for development
+
+### Core Features
 - ✅ **Production-ready chat interface** with React and TypeScript
+- ✅ **Jupyter kernel access** - Read variables, execute code, debug errors
 - ✅ **Bidirectional communication** between Python and JavaScript
 - ✅ **Self-contained** - all dependencies bundled (1.4MB)
 - ✅ **Markdown support** with syntax highlighting
 - ✅ **Dynamic action buttons** for interactive responses
 - ✅ **Screenshot capability** - View widget without Jupyter using Puppeteer
 - ✅ **Modern tooling** (Vite, TypeScript, ESLint, Prettier)
-- ✅ **Comprehensive test suite** (74 Python + 6 frontend tests)
+- ✅ **Comprehensive test suite** (85% Python coverage + frontend tests)
 - ✅ **CI/CD automation** with GitHub Actions
 - ✅ **Type safety** with full TypeScript and mypy coverage
 - ✅ **Code quality** with pre-commit hooks and linting
