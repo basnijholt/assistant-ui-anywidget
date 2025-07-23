@@ -174,20 +174,45 @@ class AIService:
         thread_id: Optional[str] = None,
         context: Optional[Dict[str, Any]] = None,
     ) -> ChatResult:
-        """Synchronous version of chat."""
-        import asyncio
+        """Synchronous version of chat.
         
-        # Handle existing event loop
+        For now, we'll use a simple synchronous approach to avoid
+        event loop issues in Jupyter notebooks.
+        """
+        if thread_id is None:
+            thread_id = str(uuid.uuid4())
+        
         try:
-            loop = asyncio.get_running_loop()
-        except RuntimeError:
-            # No loop running, we can use asyncio.run
-            return asyncio.run(self.chat(message, thread_id, context))
-        else:
-            # Loop is running (e.g., in Jupyter), create a task
-            import nest_asyncio
-            nest_asyncio.apply()
-            return asyncio.run(self.chat(message, thread_id, context))
+            # Build messages list
+            messages = []
+            
+            # Add context to the first message if provided
+            if context and thread_id not in self._threads:
+                context_msg = self._build_context_message(context)
+                messages.append({"role": "system", "content": context_msg})
+                # Track that we've initialized this thread
+                self._threads[thread_id] = []
+            
+            messages.append({"role": "user", "content": message})
+            
+            # For now, directly invoke the LLM without the graph
+            # This avoids async issues in Jupyter
+            response = self.llm.invoke(messages)
+            
+            return ChatResult(
+                content=response.content,
+                thread_id=thread_id,
+                success=True,
+            )
+            
+        except Exception as e:
+            logger.error(f"Error in AI chat: {e}")
+            return ChatResult(
+                content=f"I encountered an error: {str(e)}",
+                thread_id=thread_id,
+                success=False,
+                error=str(e),
+            )
     
     def _build_context_message(self, context: Dict[str, Any]) -> str:
         """Build a context message for the AI."""
