@@ -1,4 +1,6 @@
-# Vector Database Integration Plan
+# Vector Database Integration Plan ❌ (Not Implemented)
+
+**Status:** This feature is planned but not yet implemented. This document describes the future architecture for integrating a local vector database to enhance the AI assistant with documentation search capabilities.
 
 ## Overview
 

@@ -4,6 +4,15 @@
 
 This document defines the API for communication between the AI assistant and the Jupyter kernel. The design prioritizes safety, extensibility, and clear separation of concerns.
 
+**Implementation Status:**
+
+- ✅ Core message protocol
+- ✅ Variable management (listing, inspection)
+- ✅ Code execution
+- ✅ Basic kernel info
+- ⏳ Debugging support (partial)
+- ❌ Advanced features (events, rate limiting)
+
 ## Core Message Protocol
 
 ### Message Structure
@@ -170,7 +179,7 @@ interface InterruptExecutionRequest extends Request {
 }
 ```
 
-### 3. Debugging Support
+### 3. Debugging Support ❌ (Not Implemented)
 
 #### Get Stack Trace
 
@@ -211,7 +220,7 @@ interface ExceptionInfo {
 }
 ```
 
-#### Set Breakpoint
+#### Set Breakpoint ❌ (Not Implemented)
 
 ```typescript
 // Request
@@ -226,9 +235,9 @@ interface SetBreakpointRequest extends Request {
 }
 ```
 
-### 4. History and State
+### 4. History and State ⏳ (Partially Implemented)
 
-#### Get Execution History
+#### Get Execution History ✅ (Basic Implementation)
 
 ```typescript
 // Request
@@ -285,11 +294,11 @@ interface GetKernelInfoResponse extends Response {
 }
 ```
 
-## AI Assistant APIs
+## AI Assistant APIs ✅ (Implemented)
 
 ### 1. AI Requests
 
-#### Process AI Request
+#### Process AI Request ✅ (Working)
 
 ```typescript
 // Request
@@ -339,7 +348,7 @@ interface Explanation {
 }
 ```
 
-### 2. AI-Assisted Debugging
+### 2. AI-Assisted Debugging ❌ (Not Implemented)
 
 #### Analyze Error
 
@@ -407,7 +416,7 @@ interface WidgetConfig {
 }
 ```
 
-## Event Subscriptions
+## Event Subscriptions ❌ (Not Implemented)
 
 ### Subscribe to Events
 
@@ -461,7 +470,7 @@ interface RequestPermissionRequest extends Request {
 }
 ```
 
-## Rate Limiting and Quotas
+## Rate Limiting and Quotas ❌ (Not Implemented)
 
 ```typescript
 interface RateLimits {
