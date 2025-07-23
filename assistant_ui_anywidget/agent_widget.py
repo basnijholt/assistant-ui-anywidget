@@ -121,13 +121,16 @@ class AgentWidget(anywidget.AnyWidget):
         new_history = list(self.chat_history)
         new_history.append({"role": "user", "content": user_text})
 
+        # Update chat history immediately so user message appears in UI
+        self.chat_history = new_history
+
         # Only generate responses if AI service is available
         if self.ai_service:
             # Check if this is a command or regular message
             if user_text.startswith("/"):
                 # Handle commands
                 response = self._handle_command(user_text)
-                new_history.append({"role": "assistant", "content": response})
+                self.add_message("assistant", response)
             else:
                 # Get kernel context for AI
                 context = self._get_kernel_context()
@@ -145,7 +148,9 @@ class AgentWidget(anywidget.AnyWidget):
                     interrupt_msg = getattr(
                         result, "interrupt_message", "Approval required"
                     )
-                    new_history.append(
+                    # Add message with metadata for approval tracking
+                    current_history = list(self.chat_history)
+                    current_history.append(
                         {
                             "role": "system",
                             "content": f"🔐 **Approval Required**\n\n{interrupt_msg}",
@@ -153,6 +158,7 @@ class AgentWidget(anywidget.AnyWidget):
                             "thread_id": result.thread_id,
                         }
                     )
+                    self.chat_history = current_history
 
                     # Set action buttons for approval
                     self.set_action_buttons(
@@ -162,9 +168,7 @@ class AgentWidget(anywidget.AnyWidget):
                         ]
                     )
                 else:
-                    new_history.append({"role": "assistant", "content": result.content})
-
-        self.chat_history = new_history
+                    self.add_message("assistant", result.content)
 
     def _handle_command(self, command: str) -> str:
         """Handle slash commands."""
@@ -300,6 +304,8 @@ class AgentWidget(anywidget.AnyWidget):
     def _handle_action_button(self, action: str) -> None:
         """Handle action button clicks."""
         if action == "Approve" or action == "Deny":
+            # Clear buttons immediately when approval action is clicked
+            self.clear_action_buttons()
             # Handle LangGraph approval
             self._handle_approval(action == "Approve")
         elif action == "Confirm Clear":
