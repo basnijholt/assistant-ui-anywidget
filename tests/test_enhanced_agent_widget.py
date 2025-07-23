@@ -5,7 +5,7 @@ from unittest.mock import Mock, patch
 
 import pytest
 
-from assistant_ui_anywidget.enhanced_agent_widget import EnhancedAgentWidget
+from assistant_ui_anywidget import EnhancedAgentWidget
 from assistant_ui_anywidget.kernel_interface import VariableInfo, ExecutionResult
 
 
@@ -104,9 +104,7 @@ def mock_kernel() -> MockKernel:
 @pytest.fixture
 def widget(mock_kernel: Any) -> EnhancedAgentWidget:
     """Create EnhancedAgentWidget with mocked dependencies."""
-    with patch(
-        "assistant_ui_anywidget.enhanced_agent_widget.KernelInterface"
-    ) as mock_ki:
+    with patch("assistant_ui_anywidget.agent_widget.KernelInterface") as mock_ki:
         mock_ki.return_value = mock_kernel
         # Mock environment variables to ensure no API keys are present
         with patch.dict("os.environ", {}, clear=True):

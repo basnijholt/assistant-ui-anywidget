@@ -67,7 +67,7 @@ def test_get_last_error_with_exception() -> None:
 
 def test_enhanced_widget_context_no_kernel() -> None:
     """Test that _get_kernel_context handles missing kernel gracefully."""
-    from assistant_ui_anywidget.enhanced_agent_widget import EnhancedAgentWidget
+    from assistant_ui_anywidget import EnhancedAgentWidget
 
     widget = EnhancedAgentWidget()
 

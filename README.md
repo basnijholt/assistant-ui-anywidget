@@ -73,6 +73,7 @@ my_agent = agent()
 ```
 
 **🔥 Key Benefits:**
+
 - **Keyboard Safety**: Uses **Ctrl+D** to send messages (not Shift+Enter)
 - **No Conflicts**: Never accidentally execute cells when chatting
 - **Global State**: Same agent instance across all notebook cells
