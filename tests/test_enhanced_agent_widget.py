@@ -1,11 +1,12 @@
-"""Tests for EnhancedAgentWidget."""
+"""Tests for AgentWidget with enhanced features."""
+# mypy: disable-error-code=misc
 
 from typing import Any
 from unittest.mock import Mock, patch
 
 import pytest
 
-from assistant_ui_anywidget import EnhancedAgentWidget
+from assistant_ui_anywidget import AgentWidget
 from assistant_ui_anywidget.kernel_interface import VariableInfo, ExecutionResult
 
 
@@ -102,26 +103,26 @@ def mock_kernel() -> MockKernel:
 
 
 @pytest.fixture
-def widget(mock_kernel: Any) -> EnhancedAgentWidget:
-    """Create EnhancedAgentWidget with mocked dependencies."""
+def widget(mock_kernel: MockKernel) -> AgentWidget:
+    """Create AgentWidget with mocked dependencies."""
     with patch("assistant_ui_anywidget.agent_widget.KernelInterface") as mock_ki:
         mock_ki.return_value = mock_kernel
         # Mock environment variables to ensure no API keys are present
         with patch.dict("os.environ", {}, clear=True):
             # Create widget without API keys to force mock AI
-            widget = EnhancedAgentWidget(
+            widget = AgentWidget(
                 ai_config={
                     "require_approval": False,
                 }
             )
-            widget.kernel = mock_kernel
+            widget.kernel = mock_kernel  # type: ignore[assignment]
             return widget
 
 
-class TestEnhancedAgentWidget:
-    """Test EnhancedAgentWidget functionality."""
+class TestAgentWidget:
+    """Test AgentWidget functionality."""
 
-    def test_initialization(self, widget: Any) -> None:
+    def test_initialization(self, widget: AgentWidget) -> None:
         """Test widget initialization."""
         assert widget.kernel is not None
         assert widget.handlers is not None
@@ -129,7 +130,7 @@ class TestEnhancedAgentWidget:
         assert widget.kernel_state["available"] is True
         assert len(widget.variables_info) > 0
 
-    def test_handle_user_message(self, widget: Any) -> None:
+    def test_handle_user_message(self, widget: AgentWidget) -> None:
         """Test handling regular user messages."""
         # Regular message
         widget._handle_user_message("Hello")
@@ -148,7 +149,7 @@ class TestEnhancedAgentWidget:
         assert len(widget.chat_history) == 2
         assert "Available Commands" in widget.chat_history[1]["content"]
 
-    def test_command_vars(self, widget: Any) -> None:
+    def test_command_vars(self, widget: AgentWidget) -> None:
         """Test /vars command."""
         response = widget._cmd_show_variables()
         assert "Variables in namespace:" in response
@@ -156,7 +157,7 @@ class TestEnhancedAgentWidget:
         assert "`y`: str" in response
         assert "`df`: Mock" in response
 
-    def test_command_inspect(self, widget: Any) -> None:
+    def test_command_inspect(self, widget: AgentWidget) -> None:
         """Test /inspect command."""
         # With variable name
         response = widget._cmd_inspect_variable("x")
@@ -177,7 +178,7 @@ class TestEnhancedAgentWidget:
         assert "Attributes" in response
         assert "attr1" in response
 
-    def test_command_exec(self, widget: Any) -> None:
+    def test_command_exec(self, widget: AgentWidget) -> None:
         """Test /exec command."""
         # Successful execution
         response = widget._cmd_execute_code("1 + 1")
@@ -195,7 +196,7 @@ class TestEnhancedAgentWidget:
         response = widget._cmd_execute_code("")
         assert "Please provide code" in response
 
-    def test_command_clear(self, widget: Any) -> None:
+    def test_command_clear(self, widget: AgentWidget) -> None:
         """Test /clear command."""
         response = widget._cmd_clear_namespace()
         assert "will clear" in response
@@ -211,7 +212,7 @@ class TestEnhancedAgentWidget:
         assert confirm_button is not None
         assert confirm_button["color"] == "#dc3545"
 
-    def test_command_help(self, widget: Any) -> None:
+    def test_command_help(self, widget: AgentWidget) -> None:
         """Test /help command."""
         response = widget._cmd_show_help()
         assert "Available Commands:" in response
@@ -221,7 +222,7 @@ class TestEnhancedAgentWidget:
         assert "/clear" in response
         assert "/help" in response
 
-    def test_handle_action_button(self, widget: Any) -> None:
+    def test_handle_action_button(self, widget: AgentWidget) -> None:
         """Test action button handling."""
         # Setup clear command first
         widget._cmd_clear_namespace()
@@ -239,7 +240,7 @@ class TestEnhancedAgentWidget:
         assert "Cancelled" in widget.chat_history[0]["content"]
         assert len(widget.action_buttons) == 0
 
-    def test_handle_message_api_request(self, widget: Any) -> None:
+    def test_handle_message_api_request(self, widget: AgentWidget) -> None:
         """Test handling API requests."""
         # Mock send method
         widget.send = Mock()
@@ -259,7 +260,7 @@ class TestEnhancedAgentWidget:
         assert "response" in call_args
         assert call_args["response"]["success"] is True
 
-    def test_update_kernel_state(self, widget: Any) -> None:
+    def test_update_kernel_state(self, widget: AgentWidget) -> None:
         """Test kernel state updates."""
         widget._update_kernel_state()
 
@@ -272,9 +273,9 @@ class TestEnhancedAgentWidget:
         widget.kernel.is_available = False
         widget._update_kernel_state()
         assert widget.kernel_state["available"] is False
-        assert widget.kernel_state["status"] == "not_connected"
+        assert widget.kernel_state["status"] == "not_connected"  # type: ignore[unreachable]
 
-    def test_update_variables_info(self, widget: Any) -> None:
+    def test_update_variables_info(self, widget: AgentWidget) -> None:
         """Test variables info updates."""
         widget._update_variables_info()
 
@@ -289,7 +290,7 @@ class TestEnhancedAgentWidget:
         widget._update_variables_info()
         assert widget.variables_info == []
 
-    def test_programmatic_methods(self, widget: Any) -> None:
+    def test_programmatic_methods(self, widget: AgentWidget) -> None:
         """Test programmatic API methods."""
         # Test add_message
         widget.add_message("system", "Test message")
@@ -324,15 +325,15 @@ class TestEnhancedAgentWidget:
         widget.clear_action_buttons()
         assert len(widget.action_buttons) == 0
 
-    def test_handle_unknown_command(self, widget: Any) -> None:
+    def test_handle_unknown_command(self, widget: AgentWidget) -> None:
         """Test handling unknown commands."""
         response = widget._handle_command("/unknown")
         assert "Unknown command" in response
         assert "/help" in response
 
-    def test_empty_namespace(self, widget: Any) -> None:
+    def test_empty_namespace(self, widget: AgentWidget) -> None:
         """Test behavior with empty namespace."""
-        widget.kernel.namespace = {}
+        widget.kernel.namespace = {}  # type: ignore[attr-defined]
 
         response = widget._cmd_show_variables()
         assert "No variables" in response
@@ -340,11 +341,11 @@ class TestEnhancedAgentWidget:
         widget._update_variables_info()
         assert widget.variables_info == []
 
-    def test_kernel_not_available(self, widget: Any) -> None:
+    def test_kernel_not_available(self, widget: AgentWidget) -> None:
         """Test behavior when kernel is not available."""
         widget.kernel.is_available = False
         # Need to update the kernel info method too
-        widget.kernel.get_kernel_info = lambda: {"available": False}
+        widget.kernel.get_kernel_info = lambda: {"available": False}  # type: ignore[method-assign]
 
         # Commands should still work and report kernel unavailable
         widget._handle_user_message("/vars")

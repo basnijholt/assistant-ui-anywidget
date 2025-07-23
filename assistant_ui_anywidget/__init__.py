@@ -14,13 +14,10 @@ from .global_agent import (
     agent,  # Alias for get_agent
 )
 
-# Backward compatibility alias - both names point to the same class
-EnhancedAgentWidget = AgentWidget
 
 __all__ = [
     # Core widget classes
     "AgentWidget",
-    "EnhancedAgentWidget",
     # Kernel and messaging interfaces
     "KernelInterface",
     "VariableInfo",

@@ -98,9 +98,9 @@ agent = get_agent(reset=True)
 
 ```python
 # Direct widget creation (still works, but not recommended for notebooks)
-from assistant_ui_anywidget import EnhancedAgentWidget
+from assistant_ui_anywidget import AgentWidget
 
-widget = EnhancedAgentWidget(
+widget = AgentWidget(
     ai_config={
         'provider': 'google_genai',  # Force specific provider
         'model': 'gemini-pro',       # Choose model

@@ -26,11 +26,13 @@ This document tracks the systematic simplification of the assistant-ui-anywidget
 
 - [x] Replace AgentWidget with full functionality from EnhancedAgentWidget
 - [x] Delete duplicate enhanced_agent_widget.py file (422 lines removed)
-- [x] Update imports and make EnhancedAgentWidget an alias for backward compatibility
+- [x] ~~Update imports and make EnhancedAgentWidget an alias for backward compatibility~~ REMOVED: Following CLAUDE.md no backward compatibility rule
 - [x] Fix all test imports to use the consolidated class
 - [x] Run tests to ensure functionality preserved (129/129 passing, 77% coverage)
+- [x] Remove EnhancedAgentWidget alias, deprecation warnings, and update all references
 - [x] **Result: 76 lines of code reduced** (7% reduction)
-- [ ] Commit changes
+- [x] Commit changes ✅ f561eae
+- [x] **Post-Phase 1**: Removed backward compatibility features per CLAUDE.md principles
 
 ### 📋 Phase 2: Simplify Message Handling
 

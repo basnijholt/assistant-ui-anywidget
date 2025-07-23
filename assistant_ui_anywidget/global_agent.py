@@ -7,7 +7,6 @@ prevents accidental cell execution when using Shift+Enter or Ctrl+Enter.
 
 from typing import Any, Dict, Optional
 import threading
-import warnings
 
 from .agent_widget import AgentWidget
 
@@ -174,15 +173,3 @@ def display_agent() -> AgentWidget:
         ```
     """
     return get_agent()
-
-
-# For backward compatibility, warn about direct EnhancedAgentWidget usage
-def _deprecated_widget_warning() -> None:
-    """Issue a deprecation warning for direct widget usage."""
-    warnings.warn(
-        "Creating AgentWidget directly is discouraged in notebooks. "
-        "Use get_agent() instead for better keyboard shortcut handling and "
-        "consistent state management. See: from assistant_ui_anywidget import get_agent",
-        FutureWarning,
-        stacklevel=3,
-    )

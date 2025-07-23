@@ -65,11 +65,11 @@ def test_get_last_error_with_exception() -> None:
     assert result["traceback"] == ["line 1", "line 2"]
 
 
-def test_enhanced_widget_context_no_kernel() -> None:
+def test_agent_widget_context_no_kernel() -> None:
     """Test that _get_kernel_context handles missing kernel gracefully."""
-    from assistant_ui_anywidget import EnhancedAgentWidget
+    from assistant_ui_anywidget import AgentWidget
 
-    widget = EnhancedAgentWidget()
+    widget = AgentWidget()
 
     # Should not raise even when kernel operations fail
     context = widget._get_kernel_context()
