@@ -1,15 +1,13 @@
 """AI integration module for the assistant widget."""
 
-from .simple_service import SimpleAIService, ChatResult
-from .langgraph_service import LangGraphAIService
+from .langgraph_service import LangGraphAIService, ChatResult
 from .logger import ConversationLogger
 
-# Default to simple service for backward compatibility
-AIService = SimpleAIService
+# Use LangGraph as the only AI service
+AIService = LangGraphAIService
 
 __all__ = [
     "AIService",
-    "SimpleAIService",
     "LangGraphAIService",
     "ChatResult",
     "ConversationLogger",

@@ -102,13 +102,13 @@ class TestLangGraphApproval:
         assert widget.ai_service is not None
         assert isinstance(widget.ai_service, LangGraphAIService)
 
-        # Create widget with simple service (default)
+        # Create widget with LangGraph service (approval disabled)
         simple_widget = AgentWidget(
             ai_config={
-                "use_langgraph": False,
+                "require_approval": False,
                 "provider": "auto",
             }
         )
 
         assert simple_widget.ai_service is not None
-        assert not isinstance(simple_widget.ai_service, LangGraphAIService)
+        assert isinstance(simple_widget.ai_service, LangGraphAIService)

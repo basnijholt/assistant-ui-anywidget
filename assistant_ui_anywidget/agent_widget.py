@@ -1,14 +1,14 @@
 """AgentWidget with AI and kernel access capabilities."""
 
 import pathlib
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Dict, List, Optional
 
 import anywidget
 import traitlets
 
 from .kernel_interface import KernelInterface
 from .simple_handlers import SimpleHandlers
-from .ai import LangGraphAIService, SimpleAIService
+from .ai import LangGraphAIService
 
 
 class AgentWidget(anywidget.AnyWidget):
@@ -49,27 +49,18 @@ class AgentWidget(anywidget.AnyWidget):
         self.handlers = SimpleHandlers(self.kernel)
 
         # Initialize AI service only if AI config is provided
-        self.ai_service: Optional[Union[SimpleAIService, LangGraphAIService]] = None
+        self.ai_service: Optional[LangGraphAIService] = None
         if ai_config:
             self.ai_config = ai_config
 
-            # Choose AI service based on configuration
-            use_langgraph = ai_config.get("use_langgraph", False)
+            # Always use LangGraph service
             require_approval = ai_config.get("require_approval", True)
-
-            if use_langgraph:
-                self.ai_service = LangGraphAIService(
-                    kernel=self.kernel,
-                    model=ai_config.get("model"),
-                    provider=ai_config.get("provider"),
-                    require_approval=require_approval,
-                )
-            else:
-                self.ai_service = SimpleAIService(
-                    kernel=self.kernel,
-                    model=ai_config.get("model"),
-                    provider=ai_config.get("provider"),
-                )
+            self.ai_service = LangGraphAIService(
+                kernel=self.kernel,
+                model=ai_config.get("model"),
+                provider=ai_config.get("provider"),
+                require_approval=require_approval,
+            )
 
         # Set up message handling
         self.on_msg(self._handle_message)
@@ -332,24 +323,12 @@ for var in list(globals().keys()):
             return
 
         # Send approval decision to LangGraph
-        if hasattr(self.ai_service, "chat"):
-            # LangGraph service accepts boolean for approval
-            from .ai.langgraph_service import LangGraphAIService
-
-            if isinstance(self.ai_service, LangGraphAIService):
-                ai_result = self.ai_service.chat(
-                    message=approved,  # Send boolean for approval
-                    thread_id=thread_id,
-                    context=self._get_kernel_context(),
-                )
-            else:
-                # Simple service only accepts strings
-                approval_text = "Approved" if approved else "Denied"
-                ai_result = self.ai_service.chat(  # type: ignore[assignment]
-                    message=approval_text,
-                    thread_id=thread_id,
-                    context=self._get_kernel_context(),
-                )
+        if self.ai_service:
+            ai_result = self.ai_service.chat(
+                message=approved,  # Send boolean for approval
+                thread_id=thread_id,
+                context=self._get_kernel_context(),
+            )
 
             # Add response to history
             if ai_result.content:

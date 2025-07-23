@@ -17,7 +17,7 @@ class TestGlobalAgentAutoDetection:
         """Test that get_agent() auto-detects OpenAI when API key is available."""
         with patch.dict(os.environ, {"OPENAI_API_KEY": "test-key"}, clear=True):
             with patch(
-                "assistant_ui_anywidget.ai.simple_service.init_chat_model"
+                "assistant_ui_anywidget.ai.langgraph_service.init_chat_model"
             ) as mock_init:
                 mock_init.return_value = MagicMock()
 
@@ -34,7 +34,7 @@ class TestGlobalAgentAutoDetection:
         """Test that get_agent() auto-detects Google when API key is available."""
         with patch.dict(os.environ, {"GOOGLE_API_KEY": "test-key"}, clear=True):
             with patch(
-                "assistant_ui_anywidget.ai.simple_service.init_chat_model"
+                "assistant_ui_anywidget.ai.langgraph_service.init_chat_model"
             ) as mock_init:
                 mock_init.return_value = MagicMock()
 
@@ -50,7 +50,7 @@ class TestGlobalAgentAutoDetection:
         """Test that explicit provider overrides auto-detection."""
         with patch.dict(os.environ, {"OPENAI_API_KEY": "test-key"}, clear=True):
             with patch(
-                "assistant_ui_anywidget.ai.simple_service.init_chat_model"
+                "assistant_ui_anywidget.ai.langgraph_service.init_chat_model"
             ) as mock_init:
                 mock_init.return_value = MagicMock()
 
@@ -66,7 +66,7 @@ class TestGlobalAgentAutoDetection:
         """Test that get_agent() falls back to MockLLM when no API keys available."""
         # Clear all API keys to ensure fallback to mock
         with patch.dict(os.environ, {}, clear=True):
-            with patch("assistant_ui_anywidget.ai.simple_service.load_dotenv"):
+            with patch("assistant_ui_anywidget.ai.langgraph_service.load_dotenv"):
                 agent = get_agent()
 
                 # Should be using MockLLM
@@ -78,7 +78,7 @@ class TestGlobalAgentAutoDetection:
         """Test that get_agent() infers provider from model name when provider is auto."""
         with patch.dict(os.environ, {"OPENAI_API_KEY": "test-key"}, clear=True):
             with patch(
-                "assistant_ui_anywidget.ai.simple_service.init_chat_model"
+                "assistant_ui_anywidget.ai.langgraph_service.init_chat_model"
             ) as mock_init:
                 mock_init.return_value = MagicMock()
 
@@ -98,7 +98,7 @@ class TestGlobalAgentAutoDetection:
             clear=True,
         ):
             with patch(
-                "assistant_ui_anywidget.ai.simple_service.init_chat_model"
+                "assistant_ui_anywidget.ai.langgraph_service.init_chat_model"
             ) as mock_init:
                 mock_init.return_value = MagicMock()
 
