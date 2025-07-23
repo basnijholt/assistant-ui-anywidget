@@ -1,14 +1,14 @@
 """AgentWidget with AI and kernel access capabilities."""
 
 import pathlib
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Union
 
 import anywidget
 import traitlets
 
 from .kernel_interface import KernelInterface
 from .simple_handlers import SimpleHandlers
-from .ai import AIService
+from .ai import LangGraphAIService, SimpleAIService
 
 
 class AgentWidget(anywidget.AnyWidget):
@@ -49,14 +49,27 @@ class AgentWidget(anywidget.AnyWidget):
         self.handlers = SimpleHandlers(self.kernel)
 
         # Initialize AI service only if AI config is provided
-        self.ai_service = None
+        self.ai_service: Optional[Union[SimpleAIService, LangGraphAIService]] = None
         if ai_config:
             self.ai_config = ai_config
-            self.ai_service = AIService(
-                kernel=self.kernel,
-                model=ai_config.get("model"),
-                provider=ai_config.get("provider"),
-            )
+
+            # Choose AI service based on configuration
+            use_langgraph = ai_config.get("use_langgraph", False)
+            require_approval = ai_config.get("require_approval", True)
+
+            if use_langgraph:
+                self.ai_service = LangGraphAIService(
+                    kernel=self.kernel,
+                    model=ai_config.get("model"),
+                    provider=ai_config.get("provider"),
+                    require_approval=require_approval,
+                )
+            else:
+                self.ai_service = SimpleAIService(
+                    kernel=self.kernel,
+                    model=ai_config.get("model"),
+                    provider=ai_config.get("provider"),
+                )
 
         # Set up message handling
         self.on_msg(self._handle_message)
@@ -118,7 +131,30 @@ class AgentWidget(anywidget.AnyWidget):
                     context=context,
                 )
 
-                new_history.append({"role": "assistant", "content": result.content})
+                # Handle approval requests
+                if hasattr(result, "needs_approval") and result.needs_approval:
+                    # Show approval request
+                    interrupt_msg = getattr(
+                        result, "interrupt_message", "Approval required"
+                    )
+                    new_history.append(
+                        {
+                            "role": "system",
+                            "content": f"🔐 **Approval Required**\n\n{interrupt_msg}",
+                            "needs_approval": True,
+                            "thread_id": result.thread_id,
+                        }
+                    )
+
+                    # Set action buttons for approval
+                    self.set_action_buttons(
+                        [
+                            {"text": "Approve", "color": "#28a745", "icon": "✅"},
+                            {"text": "Deny", "color": "#dc3545", "icon": "❌"},
+                        ]
+                    )
+                else:
+                    new_history.append({"role": "assistant", "content": result.content})
 
         self.chat_history = new_history
 
@@ -255,7 +291,10 @@ class AgentWidget(anywidget.AnyWidget):
 
     def _handle_action_button(self, action: str) -> None:
         """Handle action button clicks."""
-        if action == "Confirm Clear":
+        if action == "Approve" or action == "Deny":
+            # Handle LangGraph approval
+            self._handle_approval(action == "Approve")
+        elif action == "Confirm Clear":
             # Clear namespace
             code = """
 # Clear all user-defined variables
@@ -277,6 +316,56 @@ for var in list(globals().keys()):
         elif action == "Cancel":
             self.add_message("system", "Cancelled namespace clearing.")
             self.clear_action_buttons()
+
+    def _handle_approval(self, approved: bool) -> None:
+        """Handle approval/denial of code execution."""
+        # Find the last approval request in history
+        thread_id = None
+        for msg in reversed(self.chat_history):
+            if isinstance(msg, dict) and msg.get("needs_approval"):
+                thread_id = msg.get("thread_id")
+                break
+
+        if not thread_id or not self.ai_service:
+            self.add_message("system", "❌ No pending approval request found.")
+            self.clear_action_buttons()
+            return
+
+        # Send approval decision to LangGraph
+        if hasattr(self.ai_service, "chat"):
+            # LangGraph service accepts boolean for approval
+            from .ai.langgraph_service import LangGraphAIService
+
+            if isinstance(self.ai_service, LangGraphAIService):
+                ai_result = self.ai_service.chat(
+                    message=approved,  # Send boolean for approval
+                    thread_id=thread_id,
+                    context=self._get_kernel_context(),
+                )
+            else:
+                # Simple service only accepts strings
+                approval_text = "Approved" if approved else "Denied"
+                ai_result = self.ai_service.chat(  # type: ignore[assignment]
+                    message=approval_text,
+                    thread_id=thread_id,
+                    context=self._get_kernel_context(),
+                )
+
+            # Add response to history
+            if ai_result.content:
+                self.add_message("assistant", ai_result.content)
+            elif approved:
+                self.add_message("system", "✅ Code execution approved.")
+            else:
+                self.add_message("system", "❌ Code execution denied.")
+
+        # Clear action buttons
+        self.clear_action_buttons()
+
+        # Update state after potential code execution
+        if approved:
+            self._update_kernel_state()
+            self._update_variables_info()
 
     def _update_kernel_state(self) -> None:
         """Update kernel state information."""

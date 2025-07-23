@@ -90,6 +90,13 @@ agent = get_agent(ai_config={
     'temperature': 0.7           # Response creativity
 })
 
+# With LangGraph for approval workflows
+agent = get_agent(ai_config={
+    'use_langgraph': True,       # Enable LangGraph agent
+    'require_approval': True,    # Require approval for code execution
+    'provider': 'auto'           # Auto-detect AI provider
+})
+
 # Reset to create fresh instance
 agent = get_agent(reset=True)
 ```
@@ -233,6 +240,30 @@ ruff format python tests        # Python
 cd frontend && npm run lint      # Frontend
 ruff check python tests         # Python
 mypy python                      # Type checking
+```
+
+## AI Service Architecture
+
+The widget supports two AI service implementations:
+
+### 1. **Simple Service** (Default)
+
+- Direct tool calling without state management
+- Lightweight and fast
+- Perfect for basic chat and code execution
+- No approval workflows
+
+### 2. **LangGraph Service** (Optional)
+
+- State machine-based agent with approval workflows
+- Requires approval for code execution
+- Automatic execution for read-only operations
+- Extensible for complex multi-step workflows
+
+Enable LangGraph with:
+
+```python
+agent = get_agent(ai_config={'use_langgraph': True, 'require_approval': True})
 ```
 
 ## How It Works
