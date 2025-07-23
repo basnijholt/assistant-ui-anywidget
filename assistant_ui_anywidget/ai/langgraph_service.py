@@ -118,8 +118,19 @@ class LangGraphAIService:
         # Create tools
         tools = self._create_kernel_tools()
 
-        async def call_model(state: MessagesState) -> Dict[str, List]:
-            """Call the LLM with tools."""
+        def call_model(state: MessagesState) -> Dict[str, List]:
+            """Call the LLM with tools (synchronous version)."""
+            messages = state["messages"]
+
+            # Add system message if not present
+            if not messages or not isinstance(messages[0], SystemMessage):
+                messages = [SystemMessage(content=self._get_system_prompt())] + messages
+
+            response = self.llm.bind_tools(tools).invoke(messages)
+            return {"messages": [response]}
+
+        async def acall_model(state: MessagesState) -> Dict[str, List]:
+            """Call the LLM with tools (async version)."""
             messages = state["messages"]
 
             # Add system message if not present
@@ -129,7 +140,7 @@ class LangGraphAIService:
             response = await self.llm.bind_tools(tools).ainvoke(messages)
             return {"messages": [response]}
 
-        # Add nodes
+        # Add nodes - use sync version for compatibility
         graph.add_node("agent", call_model)
         graph.add_node("tools", ToolNode(tools))
 
@@ -188,7 +199,7 @@ class LangGraphAIService:
         # Other tools don't need approval
         return "tools"
 
-    async def _approval_node(self, state: MessagesState) -> Dict[str, List]:
+    def _approval_node(self, state: MessagesState) -> Dict[str, List]:
         """Node that handles approval for code execution."""
         messages = state["messages"]
         last_message = messages[-1]
@@ -222,20 +233,129 @@ class LangGraphAIService:
         thread_id: Optional[str] = None,
         context: Optional[Dict[str, Any]] = None,
     ) -> ChatResult:
-        """Send message and get response (synchronous wrapper)."""
-        import asyncio
+        """Send message and get response (synchronous version)."""
+        if thread_id is None:
+            thread_id = str(uuid.uuid4())
 
-        # For Jupyter compatibility, use nest_asyncio if available
         try:
-            import nest_asyncio
+            # Handle approval responses
+            if isinstance(message, bool):
+                # This is an approval decision
+                from langgraph.types import Command
 
-            nest_asyncio.apply()
-        except ImportError:
-            pass
+                payload = Command(resume="approved" if message else "denied")
+            else:
+                # Normal message
+                messages = []
 
-        # Run async version
-        loop = asyncio.get_event_loop()
-        return loop.run_until_complete(self.achat(message, thread_id, context))
+                # Add context if provided
+                if context:
+                    context_msg = self._build_context_message(context)
+                    messages.append(SystemMessage(content=context_msg))
+
+                # Add user message
+                messages.append(HumanMessage(content=message))
+                payload = {"messages": messages}
+
+            # Configure the run
+            config = {
+                "configurable": {"thread_id": thread_id},
+                "run_id": uuid.uuid4(),
+            }
+
+            # Invoke the agent synchronously
+            response = self.agent.invoke(payload, config)
+
+            # Check if interrupted for approval
+            if "__interrupt__" in response:
+                interrupt_info = response["__interrupt__"][0]
+                interrupt_msg = interrupt_info.value.get("message", "Approval needed")
+
+                # Log interruption
+                self.conversation_logger.log_conversation(
+                    thread_id=thread_id,
+                    user_message=message
+                    if isinstance(message, str)
+                    else "Approval response",
+                    ai_response="[Awaiting approval]",
+                    context=context,
+                )
+
+                return ChatResult(
+                    content="",
+                    thread_id=thread_id,
+                    interrupted=True,
+                    interrupt_message=interrupt_msg,
+                )
+
+            # Extract response content
+            last_message = response["messages"][-1]
+            content = ""
+
+            if isinstance(last_message, AIMessage):
+                content = last_message.content or ""
+            elif isinstance(last_message, HumanMessage):
+                content = last_message.content
+
+            # Format content - handle various types
+            if content is None:  # type: ignore[unreachable]
+                formatted_content = ""
+            elif isinstance(content, str):
+                formatted_content = content
+            elif isinstance(content, list):  # type: ignore[unreachable]
+                # Format list of content items
+                formatted_content = "\n".join(str(item) for item in content)
+            else:
+                # Convert non-string content
+                formatted_content = str(content)
+
+            # Extract tool call info if present
+            tool_call_info = []
+            if isinstance(last_message, AIMessage) and last_message.tool_calls:
+                for tc in last_message.tool_calls:
+                    tool_call_info.append(
+                        {
+                            "name": tc.get("name"),
+                            "args": tc.get("args"),
+                        }
+                    )
+
+            # Log conversation
+            self.conversation_logger.log_conversation(
+                thread_id=thread_id,
+                user_message=message
+                if isinstance(message, str)
+                else "Approval response",
+                ai_response=formatted_content,
+                tool_calls=tool_call_info,
+                context=context,
+            )
+
+            return ChatResult(
+                content=formatted_content,
+                thread_id=thread_id,
+                success=True,
+            )
+
+        except Exception as e:
+            logger.error(f"Error in chat: {e}")
+            error_msg = f"I encountered an error: {str(e)}"
+
+            # Log error
+            self.conversation_logger.log_conversation(
+                thread_id=thread_id,
+                user_message=message if isinstance(message, str) else "Unknown message",
+                ai_response=error_msg,
+                context=context,
+                error=str(e),
+            )
+
+            return ChatResult(
+                content=error_msg,
+                thread_id=thread_id,
+                success=False,
+                error=str(e),
+            )
 
     async def achat(
         self,
@@ -308,13 +428,13 @@ class LangGraphAIService:
                 content = last_message.content
 
             # Format content - handle various types
-            if isinstance(content, list):
-                # Format list of content items
-                formatted_content = "\n".join(str(item) for item in content)
-            elif content is None:
+            if content is None:  # type: ignore[unreachable]
                 formatted_content = ""
             elif isinstance(content, str):
                 formatted_content = content
+            elif isinstance(content, list):  # type: ignore[unreachable]
+                # Format list of content items
+                formatted_content = "\n".join(str(item) for item in content)
             else:
                 # Convert non-string content
                 formatted_content = str(content)
