@@ -1,10 +1,10 @@
 """AI service for the assistant widget."""
 
+import logging
 import os
 import uuid
 from dataclasses import dataclass
 from typing import Any, Dict, List, Optional
-import logging
 
 from dotenv import load_dotenv
 from langchain.chat_models import init_chat_model
@@ -100,7 +100,7 @@ class AIService:
         if os.getenv("ANTHROPIC_API_KEY"):
             available_providers.append(("anthropic", "claude-3-opus-20240229"))
         if os.getenv("GOOGLE_API_KEY"):
-            available_providers.append(("google_genai", "gemini-1.5-flash"))
+            available_providers.append(("google_genai", "gemini-2.5-flash"))
 
         # If provider/model not specified, auto-select based on availability
         if not provider:
@@ -226,33 +226,37 @@ class AIService:
             thread_id = str(uuid.uuid4())
 
         try:
-            # Build messages list
+            # Build messages list starting with conversation history
             messages = []
 
-            # Add system prompt for new threads
+            # Initialize thread if needed
             if thread_id not in self._threads:
-                system_prompt = self._get_system_prompt()
-                messages.append({"role": "system", "content": system_prompt})
-
-                # Add context if provided
-                if context:
-                    context_msg = self._build_context_message(context)
-                    messages.append({"role": "system", "content": context_msg})
-
-                # Track that we've initialized this thread
                 self._threads[thread_id] = []
 
+            # Always start with system prompt and current context
+            system_prompt = self._get_system_prompt()
+            messages.append({"role": "system", "content": system_prompt})
+
+            # Add current context if provided
+            if context:
+                context_msg = self._build_context_message(context)
+                messages.append({"role": "system", "content": context_msg})
+
+            # Add conversation history (these are already dictionaries with role/content)
+            for msg in self._threads[thread_id]:
+                if isinstance(msg, dict) and msg.get("role") != "system":
+                    messages.append(msg)
+
+            # Add current user message
             messages.append({"role": "user", "content": message})
 
             # Create tools and bind to LLM
-            from ..kernel_tools import create_kernel_tools
             from langgraph.prebuilt import ToolNode
+
+            from ..kernel_tools import create_kernel_tools
 
             tools = create_kernel_tools(self.kernel)
             llm_with_tools = self.llm.bind_tools(tools)
-
-            # Store conversation in thread
-            self._threads[thread_id].extend(messages)
 
             # Invoke the LLM with tools
             response = llm_with_tools.invoke(messages)
@@ -269,8 +273,21 @@ class AIService:
                 final_messages = messages + [response] + tool_messages["messages"]
                 final_response = llm_with_tools.invoke(final_messages)
 
-                # Store full conversation
-                self._threads[thread_id] = final_messages + [final_response]
+                # Ensure content is always a string for consistency
+                content = final_response.content
+                if isinstance(content, list):
+                    logger.warning(f"LLM returned array response, joining: {content}")
+                    content = "\n".join(str(item) for item in content)
+                elif not isinstance(content, str):
+                    logger.warning(
+                        f"LLM returned non-string response, converting: {type(content)} - {content}"
+                    )
+                    content = str(content) if content is not None else ""
+
+                # Store conversation (add user message and final response)
+                user_msg = {"role": "user", "content": message}
+                assistant_msg = {"role": "assistant", "content": content}
+                self._threads[thread_id].extend([user_msg, assistant_msg])
 
                 # Log conversation with tool calls
                 tool_call_info = []
@@ -286,30 +303,45 @@ class AIService:
                 self.conversation_logger.log_conversation(
                     thread_id=thread_id,
                     user_message=message,
-                    ai_response=final_response.content,
+                    ai_response=content,
                     tool_calls=tool_call_info,
                     context=context,
                 )
 
                 return ChatResult(
-                    content=final_response.content,
+                    content=content,
                     thread_id=thread_id,
                     success=True,
                 )
 
-            # Store response in thread
-            self._threads[thread_id].append(response)
+            # Ensure content is always a string for consistency (no tool calls path)
+            content = response.content
+            if isinstance(content, list):
+                logger.warning(
+                    f"LLM returned array response (no tools), joining: {content}"
+                )
+                content = "\n".join(str(item) for item in content)
+            elif not isinstance(content, str):
+                logger.warning(
+                    f"LLM returned non-string response (no tools), converting: {type(content)} - {content}"
+                )
+                content = str(content) if content is not None else ""
+
+            # Store conversation (add user message and response)
+            user_msg = {"role": "user", "content": message}
+            assistant_msg = {"role": "assistant", "content": content}
+            self._threads[thread_id].extend([user_msg, assistant_msg])
 
             # Log conversation without tool calls
             self.conversation_logger.log_conversation(
                 thread_id=thread_id,
                 user_message=message,
-                ai_response=response.content,
+                ai_response=content,
                 context=context,
             )
 
             return ChatResult(
-                content=response.content,
+                content=content,
                 thread_id=thread_id,
                 success=True,
             )
@@ -353,7 +385,11 @@ class AIService:
         if "last_error" in context:
             error = context["last_error"]
             parts.append(
-                f"Recent error: {error.get('type', 'Unknown')}: {error.get('message', '')}"
+                f"\n⚠️ RECENT ERROR DETECTED:\n"
+                f"Error Type: {error.get('type', 'Unknown')}\n"
+                f"Error Message: {error.get('message', '')}\n"
+                f"This error occurred in the user's notebook. If they ask about 'the error' or 'what's wrong', "
+                f"this is what they're referring to. You can help debug this error."
             )
 
         return "\n".join(parts) if parts else "Kernel context is available."
@@ -363,35 +399,47 @@ class AIService:
         return """You are an AI assistant integrated into a Jupyter notebook widget with direct access to the kernel.
 
 Your capabilities include:
-1. **Inspecting variables**: You can examine any variable in the notebook's namespace, including its type, value, shape (for arrays/dataframes), and attributes.
-2. **Executing code**: You can run Python code directly in the kernel to perform calculations, create visualizations, or modify variables.
-3. **Listing variables**: You can see all variables currently defined in the notebook.
-4. **Getting kernel info**: You can check the kernel's status and execution count.
+1. **Conversation Memory**: You can see and remember the entire conversation history within each thread. When users ask about previous messages or what they've told you, refer to the conversation history provided in this prompt.
+2. **Inspecting variables**: You can examine any variable in the notebook's namespace, including its type, value, shape (for arrays/dataframes), and attributes.
+3. **Executing code**: You can run Python code directly in the kernel to perform calculations, create visualizations, or modify variables.
+4. **Listing variables**: You can see all variables currently defined in the notebook.
+5. **Getting kernel info**: You can check the kernel's status and execution count.
+6. **Error awareness**: You receive context about recent errors and can help debug them.
 
-IMPORTANT: You have these specific tools available:
-- `inspect_variable`: To examine a specific variable's details (type, value, shape, etc.)
-- `execute_code`: To run ANY Python code the user requests (like df.info(), calculations, creating plots, etc.)
-- `get_variables`: To list all variables in the namespace
-- `kernel_info`: To check kernel status
+CRITICAL TOOL USAGE RULES:
+- `execute_code`: Use when user wants code EXECUTED/RUN (df.info(), calculations, plots, print statements, etc.)
+- `inspect_variable`: Use when user wants to EXAMINE a variable without running code
+- `get_variables`: Use when user wants to LIST/SEE what variables exist
+- `kernel_info`: Use when user wants kernel status
 
-When users ask you to:
-- "Run [some code]" or "Execute [some code]" → Use execute_code tool with that code
-- "What is in [variable]" or "Show me [variable]" → Use inspect_variable tool
-- "Show variables" or "List variables" → Use get_variables tool
-- "Run df.info()" → Use execute_code with code="df.info()"
-- "Calculate [something]" → Use execute_code with the appropriate Python code
+MANDATORY PATTERNS - Follow these exactly:
+- User says "execute X", "run X", "do X.info()", "calculate X" → ALWAYS use execute_code
+- User says "what is X", "show me X", "inspect X" → use inspect_variable
+- User says "list variables", "show variables", "what variables exist" → use get_variables
 
-Examples:
-- User: "Run df.info()" → You should use execute_code(code="df.info()")
-- User: "What is x?" → You should use inspect_variable(variable_name="x")
-- User: "Calculate the mean of numbers" → You should use execute_code(code="import numpy as np; np.mean(numbers)")
+SPECIFIC EXAMPLES:
+- "hi what is df.info() execute it" → execute_code(code="df.info()")
+- "run df.info()" → execute_code(code="df.info()")
+- "execute df.head()" → execute_code(code="df.head()")
+- "calculate df.mean()" → execute_code(code="df.mean()")
+- "what is df" → inspect_variable(variable_name="df")
+- "show me all variables" → get_variables()
+
+NEVER use get_variables when user asks to EXECUTE/RUN code!
+
+When you execute code:
+1. Use execute_code tool with the exact code requested
+2. Report the output you receive from the tool
+3. If there are multiple outputs (stdout, result), show them all
+4. If there's an error, explain what went wrong
 
 Important guidelines:
-- When a user asks you to run or execute code, ALWAYS use the execute_code tool
+- When a user asks you to run or execute code, ALWAYS use the execute_code tool, never any other tool
+- The execute_code tool captures all output including print statements, so you can show users exactly what happened
 - You can see variables exist in the context, so you don't need to ask if they're defined
 - Always be helpful and explain what you're doing
 - When executing code that might be dangerous (like deleting variables or installing packages), explain the risks
-- If users ask about your capabilities, explain that you can directly access and manipulate their notebook environment
-- You are NOT just a language model - you have real access to their Jupyter kernel
+- Pay attention to the context provided - it may contain information about recent errors, kernel state, and variables
+- If context mentions a recent error, you can reference and help debug it without asking for more information
 
-Remember: You are an active participant in their notebook session, not just a passive Q&A system."""
+Remember: You are an active participant in their notebook session with real kernel access. When users ask you to execute code, DO IT with the execute_code tool."""

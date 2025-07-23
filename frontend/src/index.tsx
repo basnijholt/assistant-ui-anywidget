@@ -259,10 +259,12 @@ export function ChatWidget() {
                         },
                       }}
                     >
-                      {msg.content}
+                      {Array.isArray(msg.content) ? msg.content.join("\n") : msg.content}
                     </ReactMarkdown>
                   ) : (
-                    <span style={{ whiteSpace: "pre-wrap" }}>{msg.content}</span>
+                    <span style={{ whiteSpace: "pre-wrap" }}>
+                      {Array.isArray(msg.content) ? msg.content.join("\n") : msg.content}
+                    </span>
                   )}
                 </div>
               </div>

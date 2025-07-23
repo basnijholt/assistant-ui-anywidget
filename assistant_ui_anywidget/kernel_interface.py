@@ -221,15 +221,22 @@ class KernelInterface:
 
         # Execute the code
         import time
+        import io
+        from contextlib import redirect_stdout, redirect_stderr
 
         start_time = time.time()
+        stdout_buffer = io.StringIO()
+        stderr_buffer = io.StringIO()
 
         try:
             if self.shell is None:
                 raise RuntimeError("Kernel not available")
-            result = self.shell.run_cell(
-                code, silent=silent, store_history=store_history
-            )
+
+            # Capture stdout and stderr
+            with redirect_stdout(stdout_buffer), redirect_stderr(stderr_buffer):
+                result = self.shell.run_cell(
+                    code, silent=silent, store_history=store_history
+                )
 
             execution_time = time.time() - start_time
 
@@ -251,6 +258,28 @@ class KernelInterface:
 
             # Format outputs
             outputs = []
+
+            # Capture stdout output
+            stdout_text = stdout_buffer.getvalue()
+            if stdout_text:
+                outputs.append(
+                    {
+                        "type": "stream",
+                        "name": "stdout",
+                        "text": stdout_text,
+                    }
+                )
+
+            # Capture stderr output
+            stderr_text = stderr_buffer.getvalue()
+            if stderr_text:
+                outputs.append(
+                    {
+                        "type": "stream",
+                        "name": "stderr",
+                        "text": stderr_text,
+                    }
+                )
 
             # Capture result output
             if result.result is not None:
