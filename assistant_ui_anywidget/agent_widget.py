@@ -474,6 +474,34 @@ for var in list(globals().keys()):
                 )
         context["variables"] = variables
 
+        # Add notebook state (recent cells for context) if available
+        if hasattr(self.kernel, "get_notebook_state"):
+            notebook_state = self.kernel.get_notebook_state()
+            if notebook_state.cells:
+                # Include recent cells (last 5 executed)
+                recent_cells = sorted(
+                    [cell for cell in notebook_state.cells if cell.has_output],
+                    key=lambda x: x.execution_count or 0,
+                    reverse=True,
+                )[:5]
+
+                context["recent_cells"] = [
+                    {
+                        "execution_count": cell.execution_count,
+                        "input_code": cell.input_code,
+                        "output": str(cell.output) if cell.output is not None else None,
+                        "has_output": cell.has_output,
+                    }
+                    for cell in recent_cells
+                ]
+
+                # Add notebook summary
+                context["notebook_summary"] = {
+                    "total_cells": notebook_state.total_cells,
+                    "executed_cells": notebook_state.executed_cells,
+                    "current_execution_count": notebook_state.current_execution_count,
+                }
+
         # Add last error if any
         last_error = self.kernel.get_last_error()
         if last_error:

@@ -88,6 +88,46 @@ class StackFrame:
         }
 
 
+@dataclass
+class NotebookCell:
+    """Information about a notebook cell."""
+
+    cell_number: int
+    input_code: str
+    output: Optional[Any]
+    execution_count: Optional[int]
+    has_output: bool
+
+    def to_dict(self) -> dict:
+        """Convert to dictionary for serialization."""
+        return {
+            "cell_number": self.cell_number,
+            "input_code": self.input_code,
+            "output": str(self.output) if self.output is not None else None,
+            "execution_count": self.execution_count,
+            "has_output": self.has_output,
+        }
+
+
+@dataclass
+class NotebookState:
+    """Complete state of the notebook."""
+
+    cells: List[NotebookCell]
+    total_cells: int
+    executed_cells: int
+    current_execution_count: int
+
+    def to_dict(self) -> dict:
+        """Convert to dictionary for serialization."""
+        return {
+            "cells": [cell.to_dict() for cell in self.cells],
+            "total_cells": self.total_cells,
+            "executed_cells": self.executed_cells,
+            "current_execution_count": self.current_execution_count,
+        }
+
+
 class KernelInterface:
     """Interface for interacting with the IPython kernel."""
 
@@ -411,3 +451,115 @@ class KernelInterface:
             return False
         except Exception:
             return False
+
+    def get_notebook_inputs(self) -> Dict[int, str]:
+        """Get all notebook cell inputs from the In variable."""
+        if not self.is_available or not self.shell:
+            return {}
+
+        try:
+            # Access the In variable which contains cell inputs
+            in_var = self.shell.user_ns.get("In", [])
+            inputs = {}
+
+            # In[0] is usually None or empty, start from 1
+            for i, cell_input in enumerate(in_var):
+                if i > 0 and cell_input:  # Skip empty first entry
+                    inputs[i] = cell_input
+
+            return inputs
+        except Exception:
+            return {}
+
+    def get_notebook_outputs(self) -> Dict[int, Any]:
+        """Get all notebook cell outputs from the Out variable."""
+        if not self.is_available or not self.shell:
+            return {}
+
+        try:
+            # Access the Out variable which contains cell outputs
+            out_var = self.shell.user_ns.get("Out", {})
+            return dict(out_var) if out_var else {}
+        except Exception:
+            return {}
+
+    def get_notebook_state(self) -> NotebookState:
+        """Get complete notebook state including all cells and outputs."""
+        if not self.is_available:
+            return NotebookState(
+                cells=[], total_cells=0, executed_cells=0, current_execution_count=0
+            )
+
+        inputs = self.get_notebook_inputs()
+        outputs = self.get_notebook_outputs()
+
+        # Create cell objects
+        cells = []
+        all_cell_numbers = set(inputs.keys()) | set(outputs.keys())
+
+        for cell_num in sorted(all_cell_numbers):
+            input_code = inputs.get(cell_num, "")
+            output = outputs.get(cell_num)
+
+            cell = NotebookCell(
+                cell_number=cell_num,
+                input_code=input_code,
+                output=output,
+                execution_count=cell_num if cell_num in outputs else None,
+                has_output=cell_num in outputs,
+            )
+            cells.append(cell)
+
+        return NotebookState(
+            cells=cells,
+            total_cells=len(inputs),
+            executed_cells=len(outputs),
+            current_execution_count=self.shell.execution_count if self.shell else 0,
+        )
+
+    def get_cell_by_number(self, cell_number: int) -> Optional[NotebookCell]:
+        """Get a specific cell by its execution number."""
+        if not self.is_available:
+            return None
+
+        inputs = self.get_notebook_inputs()
+        outputs = self.get_notebook_outputs()
+
+        if cell_number not in inputs and cell_number not in outputs:
+            return None
+
+        return NotebookCell(
+            cell_number=cell_number,
+            input_code=inputs.get(cell_number, ""),
+            output=outputs.get(cell_number),
+            execution_count=cell_number if cell_number in outputs else None,
+            has_output=cell_number in outputs,
+        )
+
+    def search_cells_by_content(
+        self, search_term: str, case_sensitive: bool = False
+    ) -> List[NotebookCell]:
+        """Search for cells containing specific content."""
+        if not self.is_available:
+            return []
+
+        inputs = self.get_notebook_inputs()
+        outputs = self.get_notebook_outputs()
+        matching_cells = []
+
+        search_term_normalized = search_term if case_sensitive else search_term.lower()
+
+        for cell_num, input_code in inputs.items():
+            input_normalized = input_code if case_sensitive else input_code.lower()
+
+            if search_term_normalized in input_normalized:
+                cell = NotebookCell(
+                    cell_number=cell_num,
+                    input_code=input_code,
+                    output=outputs.get(cell_num),
+                    execution_count=cell_num if cell_num in outputs else None,
+                    has_output=cell_num in outputs,
+                )
+                matching_cells.append(cell)
+
+        return matching_cells

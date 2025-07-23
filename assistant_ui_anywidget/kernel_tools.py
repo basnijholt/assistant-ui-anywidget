@@ -225,6 +225,191 @@ class KernelInfoTool(BaseTool):
         return "\n".join(lines)
 
 
+class GetNotebookStateInput(BaseModel):
+    """Input for get_notebook_state tool."""
+
+    recent_only: bool = Field(
+        default=True,
+        description="Whether to return only recent cells or all cells",
+    )
+    limit: int = Field(
+        default=10,
+        description="Maximum number of cells to return",
+    )
+
+
+class SearchNotebookInput(BaseModel):
+    """Input for search_notebook tool."""
+
+    search_term: str = Field(description="Term to search for in cell contents")
+    case_sensitive: bool = Field(
+        default=False,
+        description="Whether the search should be case sensitive",
+    )
+
+
+class GetCellInput(BaseModel):
+    """Input for get_cell tool."""
+
+    cell_number: int = Field(description="Cell execution number to retrieve")
+
+
+class GetNotebookStateTool(BaseTool):
+    """Tool for getting notebook state including all cells."""
+
+    name: str = "get_notebook_state"
+    description: str = (
+        "Get the current state of the Jupyter notebook including cell contents and outputs. "
+        "Use this to understand what has been executed in the notebook, see previous results, "
+        "or get context about the user's work. Very helpful for debugging or building on previous work."
+    )
+    args_schema: Type[BaseModel] = GetNotebookStateInput
+    kernel: Any = Field(default=None, exclude=True)
+
+    def __init__(self, kernel: KernelInterface, **kwargs: Any) -> None:
+        super().__init__(kernel=kernel, **kwargs)
+
+    def _run(self, recent_only: bool = True, limit: int = 10) -> str:
+        """Get notebook state."""
+        if not self.kernel.is_available:
+            return "Kernel is not available"
+
+        notebook_state = self.kernel.get_notebook_state()
+
+        if not notebook_state.cells:
+            return "No cells have been executed in this notebook yet."
+
+        lines = [
+            "Notebook State Summary:",
+            f"Total cells: {notebook_state.total_cells}",
+            f"Executed cells: {notebook_state.executed_cells}",
+            f"Current execution count: {notebook_state.current_execution_count}",
+            "",
+        ]
+
+        # Get cells to display
+        cells_to_show = notebook_state.cells
+        if recent_only:
+            # Show most recent executed cells
+            executed_cells = [c for c in notebook_state.cells if c.has_output]
+            cells_to_show = sorted(
+                executed_cells, key=lambda x: x.execution_count or 0, reverse=True
+            )[:limit]
+        else:
+            cells_to_show = cells_to_show[:limit]
+
+        if not cells_to_show:
+            lines.append("No executed cells to display.")
+            return "\n".join(lines)
+
+        lines.append(
+            f"{'Recent' if recent_only else 'First'} {len(cells_to_show)} cells:"
+        )
+        lines.append("")
+
+        for cell in cells_to_show:
+            lines.append(f"Cell [{cell.execution_count or 'not executed'}]:")
+            lines.append("Input:")
+            lines.append(f"```python\n{cell.input_code}\n```")
+
+            if cell.has_output and cell.output is not None:
+                output_str = str(cell.output)
+                if len(output_str) > 200:
+                    output_str = output_str[:200] + "..."
+                lines.append(f"Output: {output_str}")
+            else:
+                lines.append("Output: (no output)")
+            lines.append("")
+
+        return "\n".join(lines)
+
+
+class SearchNotebookTool(BaseTool):
+    """Tool for searching notebook cells by content."""
+
+    name: str = "search_notebook"
+    description: str = (
+        "Search through notebook cells for specific content. Useful when you need to find "
+        "where something was defined, used, or calculated in previous cells."
+    )
+    args_schema: Type[BaseModel] = SearchNotebookInput
+    kernel: Any = Field(default=None, exclude=True)
+
+    def __init__(self, kernel: KernelInterface, **kwargs: Any) -> None:
+        super().__init__(kernel=kernel, **kwargs)
+
+    def _run(self, search_term: str, case_sensitive: bool = False) -> str:
+        """Search notebook cells."""
+        if not self.kernel.is_available:
+            return "Kernel is not available"
+
+        matching_cells = self.kernel.search_cells_by_content(
+            search_term, case_sensitive
+        )
+
+        if not matching_cells:
+            return f"No cells found containing '{search_term}'"
+
+        lines = [
+            f"Found {len(matching_cells)} cell(s) containing '{search_term}':",
+            "",
+        ]
+
+        for cell in matching_cells[:5]:  # Limit to first 5 matches
+            lines.append(f"Cell [{cell.execution_count or 'not executed'}]:")
+            lines.append(f"```python\n{cell.input_code}\n```")
+
+            if cell.has_output and cell.output is not None:
+                output_str = str(cell.output)
+                if len(output_str) > 100:
+                    output_str = output_str[:100] + "..."
+                lines.append(f"Output: {output_str}")
+            lines.append("")
+
+        if len(matching_cells) > 5:
+            lines.append(f"... and {len(matching_cells) - 5} more matches")
+
+        return "\n".join(lines)
+
+
+class GetCellTool(BaseTool):
+    """Tool for getting a specific cell by number."""
+
+    name: str = "get_cell"
+    description: str = (
+        "Get a specific notebook cell by its execution number. Use this when you need to "
+        "see the exact content and output of a particular cell."
+    )
+    args_schema: Type[BaseModel] = GetCellInput
+    kernel: Any = Field(default=None, exclude=True)
+
+    def __init__(self, kernel: KernelInterface, **kwargs: Any) -> None:
+        super().__init__(kernel=kernel, **kwargs)
+
+    def _run(self, cell_number: int) -> str:
+        """Get specific cell."""
+        if not self.kernel.is_available:
+            return "Kernel is not available"
+
+        cell = self.kernel.get_cell_by_number(cell_number)
+
+        if not cell:
+            return f"Cell [{cell_number}] not found"
+
+        lines = [
+            f"Cell [{cell.execution_count or 'not executed'}]:",
+            "Input:",
+            f"```python\n{cell.input_code}\n```",
+        ]
+
+        if cell.has_output and cell.output is not None:
+            lines.append(f"Output: {cell.output}")
+        else:
+            lines.append("Output: (no output)")
+
+        return "\n".join(lines)
+
+
 def create_kernel_tools(kernel: KernelInterface) -> List[BaseTool]:
     """Create all kernel tools for the agent."""
     return [
@@ -232,4 +417,7 @@ def create_kernel_tools(kernel: KernelInterface) -> List[BaseTool]:
         ExecuteCodeTool(kernel),
         GetVariablesTool(kernel),
         KernelInfoTool(kernel),
+        GetNotebookStateTool(kernel),
+        SearchNotebookTool(kernel),
+        GetCellTool(kernel),
     ]

@@ -221,7 +221,10 @@ def create_kernel_tools(kernel: KernelInterface) -> List[Any]:
             f"Variables: {info.get('namespace_size', 0)}"
         )
 
-    return [get_variables, inspect_variable, execute_code, kernel_info]
+    # Use the comprehensive tool set from kernel_tools.py instead
+    from ..kernel_tools import create_kernel_tools as create_comprehensive_tools
+
+    return create_comprehensive_tools(kernel)
 
 
 def build_context_message(context: Dict[str, Any]) -> str:
@@ -235,6 +238,22 @@ def build_context_message(context: Dict[str, Any]) -> str:
     if "variables" in context and context["variables"]:
         var_names = [v["name"] for v in context["variables"][:5]]
         parts.append(f"Key variables: {', '.join(var_names)}")
+
+    # Add notebook cell information
+    if "recent_cells" in context and context["recent_cells"]:
+        parts.append("\nRECENT NOTEBOOK CELLS:")
+        for cell in context["recent_cells"]:
+            exec_count = cell.get("execution_count", "?")
+            code = cell.get("input_code", "").strip()
+            if len(code) > 100:
+                code = code[:100] + "..."
+            parts.append(f"Cell [{exec_count}]: {code}")
+
+    if "notebook_summary" in context:
+        summary = context["notebook_summary"]
+        parts.append(
+            f"\nNotebook: {summary.get('executed_cells', 0)} executed cells, current execution count {summary.get('current_execution_count', 0)}"
+        )
 
     if "last_error" in context:
         error = context["last_error"]
@@ -252,7 +271,7 @@ def get_system_prompt(require_approval: bool = True) -> str:
         else ""
     )
 
-    return f"""You are an AI assistant with access to a Jupyter kernel.
+    return f"""You are an AI assistant with access to a Jupyter kernel and notebook history.
 
 You can:
 - List variables with get_variables()
@@ -260,8 +279,14 @@ You can:
 - Execute Python code with execute_code(code)
 - Check kernel status with kernel_info()
 
+NOTEBOOK ACCESS: You have access to recent notebook cell contents and outputs in your context.
+When users ask about "cell contents", "what code did I run", "notebook cells", or similar,
+refer to the RECENT NOTEBOOK CELLS section in your context which shows the actual code
+that was executed in previous cells.
+
 When users ask you to run or execute code, use execute_code().
 When they ask about variables, use get_variables() or inspect_variable().
+When they ask about notebook cells or previous code, refer to your context.
 Be helpful and explain what you're doing.{approval_note}"""
 
 
@@ -418,7 +443,7 @@ class LangGraphAIService:
 
             # Extract response
             last_message = response["messages"][-1]
-            content = ""
+            content = "No content"
             tool_calls = []
 
             if isinstance(last_message, AIMessage):
