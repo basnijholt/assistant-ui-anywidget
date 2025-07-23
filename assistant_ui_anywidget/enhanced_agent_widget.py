@@ -8,6 +8,7 @@ import traitlets
 
 from .kernel_interface import KernelInterface
 from .message_handlers import MessageHandlers
+from .ai import AIService
 
 
 class EnhancedAgentWidget(anywidget.AnyWidget):
@@ -42,6 +43,15 @@ class EnhancedAgentWidget(anywidget.AnyWidget):
         # Initialize kernel interface and message handlers
         self.kernel = KernelInterface()
         self.handlers = MessageHandlers(self.kernel)
+        
+        # Initialize AI service
+        ai_config = self.ai_config.to_dict() if hasattr(self.ai_config, 'to_dict') else dict(self.ai_config)
+        self.ai_service = AIService(
+            kernel=self.kernel,
+            model=ai_config.get('model'),
+            provider=ai_config.get('provider'),
+            require_approval=ai_config.get('require_approval', True),
+        )
         
         # Set up message handling
         self.on_msg(self._handle_message)
@@ -90,22 +100,17 @@ class EnhancedAgentWidget(anywidget.AnyWidget):
             response = self._handle_command(user_text)
             new_history.append({"role": "assistant", "content": response})
         else:
-            # For now, echo back with kernel info
-            # In a real implementation, this would call an AI service
-            kernel_info = self.kernel.get_kernel_info()
-            response = f"I'm your AI assistant with kernel access. The kernel is {'available' if kernel_info['available'] else 'not available'}."
+            # Get kernel context for AI
+            context = self._get_kernel_context()
             
-            # Add some helpful context
-            if kernel_info['available']:
-                namespace_size = kernel_info.get('namespace_size', 0)
-                response += f"\n\nI can see {namespace_size} variables in your namespace."
-                response += "\n\nTry commands like:"
-                response += "\n- `/vars` - Show all variables"
-                response += "\n- `/inspect <var>` - Inspect a variable"
-                response += "\n- `/exec <code>` - Execute code"
-                response += "\n- `/help` - Show all commands"
+            # Get AI response
+            result = self.ai_service.chat_sync(
+                message=user_text,
+                thread_id=self._get_thread_id(),
+                context=context,
+            )
             
-            new_history.append({"role": "assistant", "content": response})
+            new_history.append({"role": "assistant", "content": result.content})
         
         self.chat_history = new_history
     
@@ -355,3 +360,40 @@ for var in list(globals().keys()):
         self._update_variables_info()
         
         return result.to_dict()
+    
+    def _get_thread_id(self) -> str:
+        """Get or create a thread ID for the current conversation."""
+        # For now, use a simple approach - could be enhanced
+        if not hasattr(self, '_thread_id'):
+            import uuid
+            self._thread_id = str(uuid.uuid4())
+        return self._thread_id
+    
+    def _get_kernel_context(self) -> Dict[str, Any]:
+        """Get current kernel context for the AI."""
+        context = {}
+        
+        # Add kernel info
+        context['kernel_info'] = self.kernel.get_kernel_info()
+        
+        # Add variable summaries (first 10)
+        namespace = self.kernel.get_namespace()
+        variables = []
+        for name, value in list(namespace.items())[:10]:
+            var_info = self.kernel.get_variable_info(name)
+            if var_info:
+                variables.append({
+                    'name': var_info.name,
+                    'type': var_info.type,
+                    'type_str': var_info.type_str,
+                    'size': var_info.size,
+                    'shape': var_info.shape,
+                })
+        context['variables'] = variables
+        
+        # Add last error if any
+        last_error = self.kernel.get_last_error()
+        if last_error:
+            context['last_error'] = last_error
+        
+        return context
