@@ -2,7 +2,7 @@
 
 from .agent_widget import AgentWidget
 from .kernel_interface import KernelInterface, VariableInfo, ExecutionResult, StackFrame
-from .message_handlers import MessageHandlers, ErrorCode
+from .simple_handlers import SimpleHandlers
 
 # Global agent interface for notebook convenience
 from .global_agent import (
@@ -23,8 +23,7 @@ __all__ = [
     "VariableInfo",
     "ExecutionResult",
     "StackFrame",
-    "MessageHandlers",
-    "ErrorCode",
+    "SimpleHandlers",
     # Global agent interface (recommended for notebooks)
     "get_agent",
     "reset_agent",

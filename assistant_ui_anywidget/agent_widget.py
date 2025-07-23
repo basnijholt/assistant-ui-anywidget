@@ -7,7 +7,7 @@ import anywidget
 import traitlets
 
 from .kernel_interface import KernelInterface
-from .message_handlers import MessageHandlers
+from .simple_handlers import SimpleHandlers
 from .ai import AIService
 
 
@@ -46,7 +46,7 @@ class AgentWidget(anywidget.AnyWidget):
 
         # Initialize kernel interface and message handlers
         self.kernel = KernelInterface()
-        self.handlers = MessageHandlers(self.kernel)
+        self.handlers = SimpleHandlers(self.kernel)
 
         # Initialize AI service only if AI config is provided
         self.ai_service = None

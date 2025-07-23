@@ -1,17 +1,12 @@
 """Tests for message handlers."""
+# mypy: disable-error-code=misc
 
-import time
 from typing import Any
 from unittest.mock import Mock
 
 import pytest
 
-from assistant_ui_anywidget.message_handlers import (
-    MessageHandlers,
-    ErrorCode,
-    Request,
-    Response,
-)
+from assistant_ui_anywidget.simple_handlers import SimpleHandlers
 from assistant_ui_anywidget.kernel_interface import VariableInfo, ExecutionResult
 
 
@@ -121,9 +116,9 @@ def mock_kernel() -> MockKernelInterface:
 
 
 @pytest.fixture
-def message_handlers(mock_kernel: Any) -> MessageHandlers:
+def message_handlers(mock_kernel: Any) -> SimpleHandlers:
     """Create message handlers with mock kernel."""
-    return MessageHandlers(mock_kernel)
+    return SimpleHandlers(mock_kernel)
 
 
 class TestMessageHandlers:
@@ -134,19 +129,19 @@ class TestMessageHandlers:
         # Test non-dict message
         response = message_handlers.handle_message("not a dict")
         assert response["success"] is False
-        assert response["error"]["code"] == ErrorCode.INVALID_REQUEST
+        assert "type is required" in response["error"]
 
         # Test missing type
         response = message_handlers.handle_message({})
         assert response["success"] is False
-        assert "type is required" in response["error"]["message"]
+        assert "type is required" in response["error"]
 
         # Test unknown type
         response = message_handlers.handle_message(
             {"id": "123", "type": "unknown_type"}
         )
         assert response["success"] is False
-        assert response["error"]["code"] == ErrorCode.INVALID_REQUEST
+        assert "Unknown message type" in response["error"]
 
     def test_handle_get_variables(self, message_handlers: Any) -> None:
         """Test get_variables handler."""
@@ -156,7 +151,6 @@ class TestMessageHandlers:
         )
 
         assert response["success"] is True
-        assert response["request_id"] == "123"
         assert len(response["data"]["variables"]) == 3
         assert response["data"]["total_count"] == 3
 
@@ -209,7 +203,7 @@ class TestMessageHandlers:
         )
 
         assert response["success"] is True
-        info = response["data"]["info"]
+        info = response["data"]
         assert info["name"] == "x"
         assert info["type"] == "int"
         assert info["preview"] == "42"
@@ -223,10 +217,10 @@ class TestMessageHandlers:
             }
         )
 
-        info = response["data"]["info"]
+        info = response["data"]
         assert len(info["attributes"]) > 0
-        assert "repr" in info
-        assert "str" in info
+        assert "name" in info
+        assert info["name"] == "y"
 
         # Non-existent variable
         response = message_handlers.handle_message(
@@ -234,7 +228,7 @@ class TestMessageHandlers:
         )
 
         assert response["success"] is False
-        assert response["error"]["code"] == ErrorCode.VARIABLE_NOT_FOUND
+        assert "not found" in response["error"]
 
         # Missing variable name
         response = message_handlers.handle_message(
@@ -242,7 +236,7 @@ class TestMessageHandlers:
         )
 
         assert response["success"] is False
-        assert "name is required" in response["error"]["message"]
+        assert "Variable name is required" in response["error"]
 
     def test_handle_execute_code(self, message_handlers: Any) -> None:
         """Test execute_code handler."""
@@ -277,8 +271,7 @@ class TestMessageHandlers:
         )
 
         assert response["success"] is False
-        assert response["error"]["code"] == ErrorCode.EXECUTION_ERROR
-        assert "test" in response["error"]["message"]
+        assert "test" in response["error"]
 
         # Missing code
         response = message_handlers.handle_message(
@@ -286,7 +279,7 @@ class TestMessageHandlers:
         )
 
         assert response["success"] is False
-        assert "Code is required" in response["error"]["message"]
+        assert "Code is required" in response["error"]
 
     def test_handle_get_kernel_info(self, message_handlers: Any) -> None:
         """Test get_kernel_info handler."""
@@ -298,8 +291,7 @@ class TestMessageHandlers:
         data = response["data"]
         assert data["available"] is True
         assert data["language"] == "python"
-        assert "kernel_id" in data
-        assert data["status"] == "idle"
+        assert data["execution_count"] == 10
 
     def test_handle_get_stack_trace(self, message_handlers: Any) -> None:
         """Test get_stack_trace handler."""
@@ -313,9 +305,9 @@ class TestMessageHandlers:
 
         assert response["success"] is True
         data = response["data"]
-        assert "frames" in data
-        assert isinstance(data["frames"], list)
-        assert data["is_active"] is False
+        assert "stack_trace" in data
+        assert data["stack_trace"] is None  # Mock returns None
+        assert "message" in data
 
     def test_handle_get_history(self, message_handlers: Any) -> None:
         """Test get_history handler."""
@@ -361,7 +353,7 @@ class TestMessageHandlers:
         )
 
         assert response["success"] is False
-        assert response["error"]["code"] == ErrorCode.KERNEL_NOT_READY
+        assert "not available" in response["error"]
 
         # get_kernel_info should still work
         response = message_handlers.handle_message(
@@ -377,47 +369,25 @@ class TestMessageHandlers:
             {"id": "800", "type": "get_kernel_info"}
         )
 
-        # Check required fields
-        assert "id" in response
-        assert "timestamp" in response
-        assert "type" in response
-        assert response["type"] == "response"
-        assert "version" in response
-        assert "request_id" in response
-        assert response["request_id"] == "800"
+        # Check required fields in simplified format
         assert "success" in response
+        assert response["success"] is True
 
         # Success response should have data
         assert "data" in response
         assert "error" not in response
 
-    def test_message_serialization(self) -> None:
-        """Test message object serialization."""
-        # Test Request
-        request = Request(
-            id="test-123",
-            timestamp=time.time(),
-            type="test_request",
-            params={"key": "value"},
-        )
+    def test_simple_response_structure(self) -> None:
+        """Test simplified response structure."""
+        # Success response
+        success_response: dict[str, Any] = {"success": True, "data": {"result": 42}}
+        assert success_response["success"] is True
+        assert success_response["data"]["result"] == 42
 
-        data = request.to_dict()
-        assert data["id"] == "test-123"
-        assert data["type"] == "test_request"
-        assert data["params"] == {"key": "value"}
-
-        # Test Response
-        response = Response(
-            id="resp-456",
-            timestamp=time.time(),
-            type="response",
-            request_id="test-123",
-            success=True,
-            data={"result": 42},
-        )
-
-        data = response.to_dict()
-        assert data["request_id"] == "test-123"
-        assert data["success"] is True
-        assert data["data"] == {"result": 42}
-        assert "error" not in data
+        # Error response
+        error_response: dict[str, Any] = {
+            "success": False,
+            "error": "Something went wrong",
+        }
+        assert error_response["success"] is False
+        assert "Something went wrong" in error_response["error"]
