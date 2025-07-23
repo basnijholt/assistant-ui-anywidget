@@ -9,6 +9,7 @@ from typing import Any, Dict, Optional
 import threading
 
 from .agent_widget import AgentWidget
+from .kernel_interface import AIConfig
 
 
 # Global agent instance
@@ -17,7 +18,9 @@ _agent_lock = threading.Lock()
 
 
 def get_agent(
-    ai_config: Optional[Dict[str, Any]] = None, reset: bool = False, **kwargs: Any
+    ai_config: Optional[Dict[str, Any] | AIConfig] = None,
+    reset: bool = False,
+    **kwargs: Any,
 ) -> AgentWidget:
     """Get the global agent instance for notebook use.
 
@@ -72,16 +75,56 @@ def get_agent(
                     pass  # Ignore cleanup errors
 
             # Set up default AI configuration
-            default_ai_config = {
-                "require_approval": False,  # More convenient for notebook use
-                "provider": "auto",  # Auto-detect available providers
-            }
+            if isinstance(ai_config, AIConfig):
+                # Use the provided AIConfig directly
+                final_config = ai_config
+            else:
+                # Create from dict with defaults
+                default_config = {
+                    "require_approval": False,  # More convenient for notebook use
+                    "provider": "auto",  # Auto-detect available providers
+                }
 
-            if ai_config:
-                default_ai_config.update(ai_config)
+                if ai_config:
+                    default_config.update(ai_config)
+
+                # Create AIConfig with proper types
+                model = default_config.get("model")
+                if (
+                    default_config.get("provider") == "auto"
+                    and "model" not in default_config
+                ):
+                    # Set model to None for auto-detection
+                    model = None
+
+                # Extract and validate config values
+                provider_val = default_config.get("provider")
+                temp_val = default_config.get("temperature", 0.7)
+                tokens_val = default_config.get("max_tokens", 2000)
+                approval_val = default_config.get("require_approval", True)
+
+                final_config = AIConfig(
+                    model=model if isinstance(model, (str, type(None))) else None,
+                    provider=provider_val
+                    if isinstance(provider_val, (str, type(None)))
+                    else None,
+                    temperature=float(temp_val)
+                    if isinstance(temp_val, (int, float))
+                    else 0.7,
+                    max_tokens=int(tokens_val)
+                    if isinstance(tokens_val, (int, float))
+                    else 2000,
+                    system_prompt=str(
+                        default_config.get(
+                            "system_prompt",
+                            "You are a helpful AI assistant with access to the Jupyter kernel...",
+                        )
+                    ),
+                    require_approval=bool(approval_val),
+                )
 
             # Create new instance
-            _global_agent = AgentWidget(ai_config=default_ai_config, **kwargs)
+            _global_agent = AgentWidget(ai_config=final_config, **kwargs)
 
             # Add helpful message about keyboard shortcuts
             _global_agent.add_message(

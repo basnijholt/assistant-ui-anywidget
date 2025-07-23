@@ -15,7 +15,7 @@ from langgraph.graph import END, MessagesState, StateGraph
 from langgraph.prebuilt import ToolNode
 from langgraph.types import interrupt
 
-from ..kernel_interface import KernelInterface
+from ..kernel_interface import KernelInterface, KernelContext
 from .logger import ConversationLogger
 
 # Load environment variables
@@ -227,36 +227,35 @@ def create_kernel_tools(kernel: KernelInterface) -> List[Any]:
     return create_comprehensive_tools(kernel)
 
 
-def build_context_message(context: Dict[str, Any]) -> str:
+def build_context_message(context: KernelContext) -> str:
     """Build context message."""
     parts = []
 
-    if "kernel_info" in context:
-        info = context["kernel_info"]
-        parts.append(f"Kernel has {info.get('namespace_size', 0)} variables.")
+    info = context.kernel_info
+    parts.append(f"Kernel has {info.get('namespace_size', 0)} variables.")
 
-    if "variables" in context and context["variables"]:
-        var_names = [v["name"] for v in context["variables"][:5]]
+    if context.variables:
+        var_names = [v["name"] for v in context.variables[:5]]
         parts.append(f"Key variables: {', '.join(var_names)}")
 
     # Add notebook cell information
-    if "recent_cells" in context and context["recent_cells"]:
+    if context.recent_cells:
         parts.append("\nRECENT NOTEBOOK CELLS:")
-        for cell in context["recent_cells"]:
+        for cell in context.recent_cells:
             exec_count = cell.get("execution_count", "?")
             code = cell.get("input_code", "").strip()
             if len(code) > 100:
                 code = code[:100] + "..."
             parts.append(f"Cell [{exec_count}]: {code}")
 
-    if "notebook_summary" in context:
-        summary = context["notebook_summary"]
+    if context.notebook_summary:
+        summary = context.notebook_summary
         parts.append(
             f"\nNotebook: {summary.get('executed_cells', 0)} executed cells, current execution count {summary.get('current_execution_count', 0)}"
         )
 
-    if "last_error" in context:
-        error = context["last_error"]
+    if context.last_error:
+        error = context.last_error
         parts.append(f"Recent error: {error.get('message', 'Unknown error')}")
 
     return "\n".join(parts) if parts else "Kernel context available."
@@ -394,7 +393,7 @@ class LangGraphAIService:
         self,
         message: str | bool,
         thread_id: Optional[str] = None,
-        context: Optional[Dict[str, Any]] = None,
+        context: Optional[KernelContext] = None,
     ) -> ChatResult:
         """Send message and get response (synchronous version)."""
         if thread_id is None:
@@ -431,7 +430,7 @@ class LangGraphAIService:
                     thread_id=thread_id,
                     user_message=str(message),
                     ai_response="[Awaiting approval]",
-                    context=context,
+                    context=context.to_dict() if context else None,
                 )
 
                 return ChatResult(
@@ -466,7 +465,7 @@ class LangGraphAIService:
                 user_message=str(message),
                 ai_response=content,
                 tool_calls=tool_calls if tool_calls else None,
-                context=context,
+                context=context.to_dict() if context else None,
             )
 
             return ChatResult(
@@ -483,7 +482,7 @@ class LangGraphAIService:
                 thread_id=thread_id,
                 user_message=str(message),
                 ai_response=error_msg,
-                context=context,
+                context=context.to_dict() if context else None,
                 error=str(e),
             )
 

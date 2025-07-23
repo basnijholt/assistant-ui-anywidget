@@ -6,7 +6,7 @@ from typing import Any, Dict, List, Optional
 import anywidget
 import traitlets
 
-from .kernel_interface import KernelInterface
+from .kernel_interface import KernelInterface, KernelContext, AIConfig
 from .simple_handlers import SimpleHandlers
 from .ai import LangGraphAIService
 
@@ -39,7 +39,7 @@ class AgentWidget(anywidget.AnyWidget):
     ).tag(sync=True)
 
     def __init__(
-        self, ai_config: Optional[Dict[str, Any]] = None, **kwargs: Any
+        self, ai_config: Optional[Dict[str, Any] | AIConfig] = None, **kwargs: Any
     ) -> None:
         """Initialize the widget."""
         super().__init__(**kwargs)
@@ -51,15 +51,32 @@ class AgentWidget(anywidget.AnyWidget):
         # Initialize AI service only if AI config is provided
         self.ai_service: Optional[LangGraphAIService] = None
         if ai_config:
-            self.ai_config = ai_config
+            # Convert dict to AIConfig if needed
+            if isinstance(ai_config, dict):
+                # Filter out unknown keys before creating AIConfig
+                valid_keys = {
+                    "model",
+                    "provider",
+                    "temperature",
+                    "max_tokens",
+                    "system_prompt",
+                    "require_approval",
+                }
+                filtered_config = {
+                    k: v for k, v in ai_config.items() if k in valid_keys
+                }
+                config = AIConfig(**filtered_config)
+            else:
+                config = ai_config
+
+            self.ai_config = config.to_dict()
 
             # Always use LangGraph service
-            require_approval = ai_config.get("require_approval", True)
             self.ai_service = LangGraphAIService(
                 kernel=self.kernel,
-                model=ai_config.get("model"),
-                provider=ai_config.get("provider"),
-                require_approval=require_approval,
+                model=config.model,
+                provider=config.provider,
+                require_approval=config.require_approval,
             )
 
         # Set up message handling
@@ -450,12 +467,10 @@ for var in list(globals().keys()):
             self._thread_id = str(uuid.uuid4())
         return self._thread_id
 
-    def _get_kernel_context(self) -> Dict[str, Any]:
+    def _get_kernel_context(self) -> KernelContext:
         """Get current kernel context for the AI."""
-        context: Dict[str, Any] = {}
-
         # Add kernel info
-        context["kernel_info"] = self.kernel.get_kernel_info()
+        kernel_info = self.kernel.get_kernel_info()
 
         # Add variable summaries (first 10)
         namespace = self.kernel.get_namespace()
@@ -472,31 +487,33 @@ for var in list(globals().keys()):
                         "shape": var_info.shape,
                     }
                 )
-        context["variables"] = variables
+
+        recent_cells = None
+        notebook_summary = None
 
         # Add notebook state (recent cells for context) if available
         if self.kernel.is_available:
             notebook_state = self.kernel.get_notebook_state()
             if notebook_state.cells:
                 # Include recent cells (last 5 executed)
-                recent_cells = sorted(
+                recent_cells_data = sorted(
                     [cell for cell in notebook_state.cells if cell.has_output],
                     key=lambda x: x.execution_count or 0,
                     reverse=True,
                 )[:5]
 
-                context["recent_cells"] = [
+                recent_cells = [
                     {
                         "execution_count": cell.execution_count,
                         "input_code": cell.input_code,
                         "output": str(cell.output) if cell.output is not None else None,
                         "has_output": cell.has_output,
                     }
-                    for cell in recent_cells
+                    for cell in recent_cells_data
                 ]
 
                 # Add notebook summary
-                context["notebook_summary"] = {
+                notebook_summary = {
                     "total_cells": notebook_state.total_cells,
                     "executed_cells": notebook_state.executed_cells,
                     "current_execution_count": notebook_state.current_execution_count,
@@ -504,10 +521,14 @@ for var in list(globals().keys()):
 
         # Add last error if any
         last_error = self.kernel.get_last_error()
-        if last_error:
-            context["last_error"] = last_error
 
-        return context
+        return KernelContext(
+            kernel_info=kernel_info,
+            variables=variables,
+            recent_cells=recent_cells,
+            notebook_summary=notebook_summary,
+            last_error=last_error,
+        )
 
     def get_conversation_log_path(self) -> Optional[str]:
         """Get the current conversation log file path."""

@@ -128,6 +128,52 @@ class NotebookState:
         }
 
 
+@dataclass
+class KernelContext:
+    """Context information about the kernel state."""
+
+    kernel_info: Dict[str, Any]
+    variables: List[Dict[str, Any]]
+    recent_cells: Optional[List[Dict[str, Any]]] = None
+    notebook_summary: Optional[Dict[str, Any]] = None
+    last_error: Optional[Dict[str, Any]] = None
+
+    def to_dict(self) -> dict:
+        """Convert to dictionary for serialization."""
+        return {
+            "kernel_info": self.kernel_info,
+            "variables": self.variables,
+            "recent_cells": self.recent_cells,
+            "notebook_summary": self.notebook_summary,
+            "last_error": self.last_error,
+        }
+
+
+@dataclass
+class AIConfig:
+    """AI configuration settings."""
+
+    model: Optional[str] = "gpt-4"
+    provider: Optional[str] = None
+    temperature: float = 0.7
+    max_tokens: int = 2000
+    system_prompt: str = (
+        "You are a helpful AI assistant with access to the Jupyter kernel..."
+    )
+    require_approval: bool = True
+
+    def to_dict(self) -> dict:
+        """Convert to dictionary for serialization."""
+        return {
+            "model": self.model,
+            "provider": self.provider,
+            "temperature": self.temperature,
+            "max_tokens": self.max_tokens,
+            "system_prompt": self.system_prompt,
+            "require_approval": self.require_approval,
+        }
+
+
 class KernelInterface:
     """Interface for interacting with the IPython kernel."""
 
