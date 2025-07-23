@@ -28,6 +28,51 @@ class ChatResult:
     error: Optional[str] = None
 
 
+def init_llm(
+    model: Optional[str] = None,
+    provider: Optional[str] = None,
+    **kwargs: Any,
+) -> BaseLanguageModel:
+    """Initialize language model with simple provider detection."""
+    # Auto-detect if provider is None or "auto"
+    if not provider or provider == "auto":
+        # Simple provider detection - try each one in order
+        providers = [
+            ("openai", "gpt-4", "OPENAI_API_KEY"),
+            ("anthropic", "claude-3-opus-20240229", "ANTHROPIC_API_KEY"),
+            ("google_genai", "gemini-2.5-flash", "GOOGLE_API_KEY"),
+        ]
+
+        # Auto-detect based on available API keys
+        for prov, default_model, env_var in providers:
+            if os.getenv(env_var):
+                try:
+                    use_model = model or default_model
+                    return init_chat_model(
+                        model=use_model, model_provider=prov, **kwargs
+                    )
+                except Exception as e:
+                    logger.error(f"Failed to initialize {prov}: {e}")
+                    continue
+
+        # Fallback to mock
+        logger.warning("No AI provider available, using mock")
+        from .mock import MockLLM
+
+        return MockLLM()
+
+    # Use explicit provider/model if provided
+    try:
+        use_model = model or "gpt-4"  # Default model
+        return init_chat_model(model=use_model, model_provider=provider, **kwargs)
+    except Exception as e:
+        logger.error(f"Failed to initialize {provider}/{model}: {e}")
+        logger.warning("Falling back to mock")
+        from .mock import MockLLM
+
+        return MockLLM()
+
+
 class SimpleAIService:
     """Simplified AI service with direct tool calling."""
 
@@ -40,58 +85,13 @@ class SimpleAIService:
     ):
         """Initialize the AI service."""
         self.kernel = kernel
-        self.llm = self._init_llm(model, provider, **kwargs)
+        self.llm = init_llm(model, provider, **kwargs)
         self.conversations: Dict[str, List[Dict[str, str]]] = {}
 
         # Initialize conversation logger
         self.conversation_logger = ConversationLogger()
         log_path = self.conversation_logger.start_session()
         logger.info(f"Started conversation logging to: {log_path}")
-
-    def _init_llm(
-        self,
-        model: Optional[str] = None,
-        provider: Optional[str] = None,
-        **kwargs: Any,
-    ) -> BaseLanguageModel:
-        """Initialize language model with simple provider detection."""
-        # Auto-detect if provider is None or "auto"
-        if not provider or provider == "auto":
-            # Simple provider detection - try each one in order
-            providers = [
-                ("openai", "gpt-4", "OPENAI_API_KEY"),
-                ("anthropic", "claude-3-opus-20240229", "ANTHROPIC_API_KEY"),
-                ("google_genai", "gemini-2.5-flash", "GOOGLE_API_KEY"),
-            ]
-
-            # Auto-detect based on available API keys
-            for prov, default_model, env_var in providers:
-                if os.getenv(env_var):
-                    try:
-                        use_model = model or default_model
-                        return init_chat_model(
-                            model=use_model, model_provider=prov, **kwargs
-                        )
-                    except Exception as e:
-                        logger.error(f"Failed to initialize {prov}: {e}")
-                        continue
-
-            # Fallback to mock
-            logger.warning("No AI provider available, using mock")
-            from .mock import MockLLM
-
-            return MockLLM()
-
-        # Use explicit provider/model if provided
-        try:
-            use_model = model or "gpt-4"  # Default model
-            return init_chat_model(model=use_model, model_provider=provider, **kwargs)
-        except Exception as e:
-            logger.error(f"Failed to initialize {provider}/{model}: {e}")
-            logger.warning("Falling back to mock")
-            from .mock import MockLLM
-
-            return MockLLM()
 
     def chat(
         self,
@@ -114,11 +114,11 @@ class SimpleAIService:
             messages = []
 
             # System prompt
-            messages.append({"role": "system", "content": self._get_system_prompt()})
+            messages.append({"role": "system", "content": get_system_prompt()})
 
             # Add context if provided
             if context:
-                context_msg = self._build_context_message(context)
+                context_msg = build_context_message(context)
                 messages.append({"role": "system", "content": context_msg})
 
             # Add conversation history
@@ -129,7 +129,7 @@ class SimpleAIService:
             messages.append({"role": "user", "content": message})
 
             # Create simple tools
-            tools = self._create_simple_tools()
+            tools = create_simple_tools(self.kernel)
             llm_with_tools = self.llm.bind_tools(tools)
 
             # Get response
@@ -137,7 +137,9 @@ class SimpleAIService:
 
             # Handle tool calls if present
             if hasattr(response, "tool_calls") and response.tool_calls:
-                response = self._handle_tool_calls(response, messages, llm_with_tools)
+                response = handle_tool_calls(
+                    self.kernel, response, messages, llm_with_tools
+                )
 
             # Extract content
             content = str(response.content) if response.content else ""
@@ -192,128 +194,130 @@ class SimpleAIService:
                 error=str(e),
             )
 
-    def _create_simple_tools(self) -> List[Any]:
-        """Create simple kernel tools."""
-        from langchain.tools import tool
 
-        @tool  # type: ignore[misc]
-        def get_variables() -> str:
-            """List all variables in the kernel namespace."""
-            if not self.kernel.is_available:
-                return "Kernel not available"
+def create_simple_tools(kernel: KernelInterface) -> List[Any]:
+    """Create simple kernel tools."""
+    from langchain.tools import tool
 
-            namespace = self.kernel.get_namespace()
-            if not namespace:
-                return "No variables in namespace"
+    @tool  # type: ignore[misc]
+    def get_variables() -> str:
+        """List all variables in the kernel namespace."""
+        if not kernel.is_available:
+            return "Kernel not available"
 
-            vars_by_type: Dict[str, List[str]] = {}
-            for name, value in namespace.items():
-                if name.startswith("_"):
-                    continue
-                type_name = type(value).__name__
-                if type_name not in vars_by_type:
-                    vars_by_type[type_name] = []
-                vars_by_type[type_name].append(name)
+        namespace = kernel.get_namespace()
+        if not namespace:
+            return "No variables in namespace"
 
-            lines = [f"Variables ({len(namespace)} total):"]
-            for type_name in sorted(vars_by_type.keys()):
-                var_names = sorted(vars_by_type[type_name])
-                lines.append(f"{type_name}: {', '.join(var_names[:10])}")
-                if len(var_names) > 10:
-                    lines[-1] += f" ... and {len(var_names) - 10} more"
+        vars_by_type: Dict[str, List[str]] = {}
+        for name, value in namespace.items():
+            if name.startswith("_"):
+                continue
+            type_name = type(value).__name__
+            if type_name not in vars_by_type:
+                vars_by_type[type_name] = []
+            vars_by_type[type_name].append(name)
 
-            return "\n".join(lines)
+        lines = [f"Variables ({len(namespace)} total):"]
+        for type_name in sorted(vars_by_type.keys()):
+            var_names = sorted(vars_by_type[type_name])
+            lines.append(f"{type_name}: {', '.join(var_names[:10])}")
+            if len(var_names) > 10:
+                lines[-1] += f" ... and {len(var_names) - 10} more"
 
-        @tool  # type: ignore[misc]
-        def inspect_variable(variable_name: str) -> str:
-            """Inspect a specific variable."""
-            if not self.kernel.is_available:
-                return "Kernel not available"
+        return "\n".join(lines)
 
-            var_info = self.kernel.get_variable_info(variable_name)
-            if not var_info:
-                return f"Variable '{variable_name}' not found"
+    @tool  # type: ignore[misc]
+    def inspect_variable(variable_name: str) -> str:
+        """Inspect a specific variable."""
+        if not kernel.is_available:
+            return "Kernel not available"
 
-            return (
-                f"Variable: {var_info.name}\n"
-                f"Type: {var_info.type_str}\n"
-                f"Preview: {var_info.preview}"
-            )
+        var_info = kernel.get_variable_info(variable_name)
+        if not var_info:
+            return f"Variable '{variable_name}' not found"
 
-        @tool  # type: ignore[misc]
-        def execute_code(code: str) -> str:
-            """Execute Python code in the kernel."""
-            if not self.kernel.is_available:
-                return "Kernel not available"
+        return (
+            f"Variable: {var_info.name}\n"
+            f"Type: {var_info.type_str}\n"
+            f"Preview: {var_info.preview}"
+        )
 
-            result = self.kernel.execute_code(code)
+    @tool  # type: ignore[misc]
+    def execute_code(code: str) -> str:
+        """Execute Python code in the kernel."""
+        if not kernel.is_available:
+            return "Kernel not available"
 
-            if result.success:
-                output_parts = ["Code executed successfully."]
-                if result.outputs:
-                    for output in result.outputs:
-                        if output["type"] == "execute_result":
-                            output_parts.append(
-                                f"Result: {output['data']['text/plain']}"
-                            )
-                        elif output["type"] == "stream":
-                            output_parts.append(f"Output: {output['text']}")
-                return "\n".join(output_parts)
-            else:
-                error_msg = "Code execution failed."
-                if result.error:
-                    error_msg += f"\nError: {result.error['message']}"
-                return error_msg
+        result = kernel.execute_code(code)
 
-        @tool  # type: ignore[misc]
-        def kernel_info() -> str:
-            """Get kernel information."""
-            info = self.kernel.get_kernel_info()
-            return (
-                f"Kernel Status: {'Available' if info['available'] else 'Not Available'}\n"
-                f"Execution Count: {info['execution_count']}\n"
-                f"Variables: {info.get('namespace_size', 0)}"
-            )
+        if result.success:
+            output_parts = ["Code executed successfully."]
+            if result.outputs:
+                for output in result.outputs:
+                    if output["type"] == "execute_result":
+                        output_parts.append(f"Result: {output['data']['text/plain']}")
+                    elif output["type"] == "stream":
+                        output_parts.append(f"Output: {output['text']}")
+            return "\n".join(output_parts)
+        else:
+            error_msg = "Code execution failed."
+            if result.error:
+                error_msg += f"\nError: {result.error['message']}"
+            return error_msg
 
-        return [get_variables, inspect_variable, execute_code, kernel_info]
+    @tool  # type: ignore[misc]
+    def kernel_info() -> str:
+        """Get kernel information."""
+        info = kernel.get_kernel_info()
+        return (
+            f"Kernel Status: {'Available' if info['available'] else 'Not Available'}\n"
+            f"Execution Count: {info['execution_count']}\n"
+            f"Variables: {info.get('namespace_size', 0)}"
+        )
 
-    def _handle_tool_calls(
-        self, response: Any, messages: List[Dict], llm_with_tools: Any
-    ) -> Any:
-        """Handle tool calls and get final response."""
-        from langgraph.prebuilt import ToolNode
+    return [get_variables, inspect_variable, execute_code, kernel_info]
 
-        tools = self._create_simple_tools()
-        tool_node = ToolNode(tools)
 
-        # Execute tools
-        tool_messages = tool_node.invoke({"messages": messages + [response]})
+def handle_tool_calls(
+    kernel: KernelInterface, response: Any, messages: List[Dict], llm_with_tools: Any
+) -> Any:
+    """Handle tool calls and get final response."""
+    from langgraph.prebuilt import ToolNode
 
-        # Get final response
-        final_messages = messages + [response] + tool_messages["messages"]
-        return llm_with_tools.invoke(final_messages)
+    tools = create_simple_tools(kernel)
+    tool_node = ToolNode(tools)
 
-    def _build_context_message(self, context: Dict[str, Any]) -> str:
-        """Build context message."""
-        parts = []
+    # Execute tools
+    tool_messages = tool_node.invoke({"messages": messages + [response]})
 
-        if "kernel_info" in context:
-            info = context["kernel_info"]
-            parts.append(f"Kernel has {info.get('namespace_size', 0)} variables.")
+    # Get final response
+    final_messages = messages + [response] + tool_messages["messages"]
+    return llm_with_tools.invoke(final_messages)
 
-        if "variables" in context and context["variables"]:
-            var_names = [v["name"] for v in context["variables"][:5]]
-            parts.append(f"Key variables: {', '.join(var_names)}")
 
-        if "last_error" in context:
-            error = context["last_error"]
-            parts.append(f"Recent error: {error.get('message', 'Unknown error')}")
+def build_context_message(context: Dict[str, Any]) -> str:
+    """Build context message."""
+    parts = []
 
-        return "\n".join(parts) if parts else "Kernel context available."
+    if "kernel_info" in context:
+        info = context["kernel_info"]
+        parts.append(f"Kernel has {info.get('namespace_size', 0)} variables.")
 
-    def _get_system_prompt(self) -> str:
-        """Get system prompt."""
-        return """You are an AI assistant with access to a Jupyter kernel.
+    if "variables" in context and context["variables"]:
+        var_names = [v["name"] for v in context["variables"][:5]]
+        parts.append(f"Key variables: {', '.join(var_names)}")
+
+    if "last_error" in context:
+        error = context["last_error"]
+        parts.append(f"Recent error: {error.get('message', 'Unknown error')}")
+
+    return "\n".join(parts) if parts else "Kernel context available."
+
+
+def get_system_prompt() -> str:
+    """Get system prompt."""
+    return """You are an AI assistant with access to a Jupyter kernel.
 
 You can:
 - List variables with get_variables()
