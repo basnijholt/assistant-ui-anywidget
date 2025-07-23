@@ -475,7 +475,7 @@ for var in list(globals().keys()):
         context["variables"] = variables
 
         # Add notebook state (recent cells for context) if available
-        if hasattr(self.kernel, "get_notebook_state"):
+        if self.kernel.is_available:
             notebook_state = self.kernel.get_notebook_state()
             if notebook_state.cells:
                 # Include recent cells (last 5 executed)

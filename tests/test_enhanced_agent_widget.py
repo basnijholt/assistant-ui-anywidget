@@ -7,7 +7,12 @@ from unittest.mock import Mock, patch
 import pytest
 
 from assistant_ui_anywidget import AgentWidget
-from assistant_ui_anywidget.kernel_interface import VariableInfo, ExecutionResult
+from assistant_ui_anywidget.kernel_interface import (
+    VariableInfo,
+    ExecutionResult,
+    NotebookState,
+    NotebookCell,
+)
 
 
 class MockKernel:
@@ -94,6 +99,88 @@ class MockKernel:
                 execution_time=0.001,
                 variables_changed=[],
             )
+
+    def get_notebook_inputs(self) -> dict[int, str]:
+        """Mock notebook inputs."""
+        return {
+            1: "import pandas as pd",
+            2: "x = 42",
+            3: "print('hello')",
+        }
+
+    def get_notebook_outputs(self) -> dict[int, Any]:
+        """Mock notebook outputs."""
+        return {
+            2: None,  # x = 42 has no output
+            3: "hello",  # print output
+        }
+
+    def get_notebook_state(self) -> NotebookState:
+        """Mock notebook state."""
+
+        inputs = self.get_notebook_inputs()
+        outputs = self.get_notebook_outputs()
+
+        cells = []
+        for cell_num in inputs:
+            cell = NotebookCell(
+                cell_number=cell_num,
+                input_code=inputs[cell_num],
+                output=outputs.get(cell_num),
+                execution_count=cell_num if cell_num in outputs else None,
+                has_output=cell_num in outputs,
+            )
+            cells.append(cell)
+
+        return NotebookState(
+            cells=cells,
+            total_cells=len(inputs),
+            executed_cells=len(outputs),
+            current_execution_count=3,
+        )
+
+    def get_cell_by_number(self, cell_number: int) -> NotebookCell | None:
+        """Mock get specific cell."""
+
+        inputs = self.get_notebook_inputs()
+        outputs = self.get_notebook_outputs()
+
+        if cell_number not in inputs:
+            return None
+
+        return NotebookCell(
+            cell_number=cell_number,
+            input_code=inputs[cell_number],
+            output=outputs.get(cell_number),
+            execution_count=cell_number if cell_number in outputs else None,
+            has_output=cell_number in outputs,
+        )
+
+    def search_cells_by_content(
+        self, search_term: str, case_sensitive: bool = False
+    ) -> list[NotebookCell]:
+        """Mock search cells."""
+
+        inputs = self.get_notebook_inputs()
+        outputs = self.get_notebook_outputs()
+        matching_cells = []
+
+        search_term_normalized = search_term if case_sensitive else search_term.lower()
+
+        for cell_num, input_code in inputs.items():
+            input_normalized = input_code if case_sensitive else input_code.lower()
+
+            if search_term_normalized in input_normalized:
+                cell = NotebookCell(
+                    cell_number=cell_num,
+                    input_code=input_code,
+                    output=outputs.get(cell_num),
+                    execution_count=cell_num if cell_num in outputs else None,
+                    has_output=cell_num in outputs,
+                )
+                matching_cells.append(cell)
+
+        return matching_cells
 
 
 @pytest.fixture
