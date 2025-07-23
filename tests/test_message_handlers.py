@@ -1,6 +1,7 @@
 """Tests for message handlers."""
 
 import time
+from typing import Any
 from unittest.mock import Mock
 
 import pytest
@@ -17,17 +18,17 @@ from assistant_ui_anywidget.kernel_interface import VariableInfo, ExecutionResul
 class MockKernelInterface:
     """Mock kernel interface for testing."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.is_available = True
         self.namespace = {"x": 42, "y": "hello", "data": [1, 2, 3, 4, 5]}
         # Mock shell with execution_count
         self.shell = Mock(execution_count=10)
 
-    def get_namespace(self):
+    def get_namespace(self) -> dict[str, Any]:
         """Get mock namespace."""
         return self.namespace
 
-    def get_variable_info(self, name, deep=False):
+    def get_variable_info(self, name: str, deep: bool = False) -> VariableInfo | None:
         """Get mock variable info."""
         if name not in self.namespace:
             return None
@@ -45,7 +46,9 @@ class MockKernelInterface:
             last_modified=None,
         )
 
-    def execute_code(self, code, silent=False, store_history=True):
+    def execute_code(
+        self, code: str, silent: bool = False, store_history: bool = True
+    ) -> ExecutionResult:
         """Mock code execution."""
         if code == "1 + 1":
             return ExecutionResult(
@@ -92,7 +95,7 @@ class MockKernelInterface:
                 variables_changed=[],
             )
 
-    def get_kernel_info(self):
+    def get_kernel_info(self) -> dict[str, Any]:
         """Get mock kernel info."""
         return {
             "available": self.is_available,
@@ -100,23 +103,25 @@ class MockKernelInterface:
             "execution_count": 10,
         }
 
-    def get_stack_trace(self, include_locals=False, max_frames=10):
+    def get_stack_trace(
+        self, include_locals: bool = False, max_frames: int = 10
+    ) -> list[Any]:
         """Get mock stack trace."""
         return []
 
-    def get_last_error(self):
+    def get_last_error(self) -> None:
         """Get mock last error."""
         return None
 
 
 @pytest.fixture
-def mock_kernel():
+def mock_kernel() -> MockKernelInterface:
     """Create mock kernel interface."""
     return MockKernelInterface()
 
 
 @pytest.fixture
-def message_handlers(mock_kernel):
+def message_handlers(mock_kernel: Any) -> MessageHandlers:
     """Create message handlers with mock kernel."""
     return MessageHandlers(mock_kernel)
 
@@ -124,7 +129,7 @@ def message_handlers(mock_kernel):
 class TestMessageHandlers:
     """Test message handler functionality."""
 
-    def test_handle_invalid_message(self, message_handlers):
+    def test_handle_invalid_message(self, message_handlers: Any) -> None:
         """Test handling invalid messages."""
         # Test non-dict message
         response = message_handlers.handle_message("not a dict")
@@ -143,7 +148,7 @@ class TestMessageHandlers:
         assert response["success"] is False
         assert response["error"]["code"] == ErrorCode.INVALID_REQUEST
 
-    def test_handle_get_variables(self, message_handlers):
+    def test_handle_get_variables(self, message_handlers: Any) -> None:
         """Test get_variables handler."""
         # Basic request
         response = message_handlers.handle_message(
@@ -196,7 +201,7 @@ class TestMessageHandlers:
         names = [v["name"] for v in variables]
         assert names == ["y", "x", "data"]
 
-    def test_handle_inspect_variable(self, message_handlers):
+    def test_handle_inspect_variable(self, message_handlers: Any) -> None:
         """Test inspect_variable handler."""
         # Valid variable
         response = message_handlers.handle_message(
@@ -239,7 +244,7 @@ class TestMessageHandlers:
         assert response["success"] is False
         assert "name is required" in response["error"]["message"]
 
-    def test_handle_execute_code(self, message_handlers):
+    def test_handle_execute_code(self, message_handlers: Any) -> None:
         """Test execute_code handler."""
         # Successful execution
         response = message_handlers.handle_message(
@@ -283,7 +288,7 @@ class TestMessageHandlers:
         assert response["success"] is False
         assert "Code is required" in response["error"]["message"]
 
-    def test_handle_get_kernel_info(self, message_handlers):
+    def test_handle_get_kernel_info(self, message_handlers: Any) -> None:
         """Test get_kernel_info handler."""
         response = message_handlers.handle_message(
             {"id": "400", "type": "get_kernel_info"}
@@ -296,7 +301,7 @@ class TestMessageHandlers:
         assert "kernel_id" in data
         assert data["status"] == "idle"
 
-    def test_handle_get_stack_trace(self, message_handlers):
+    def test_handle_get_stack_trace(self, message_handlers: Any) -> None:
         """Test get_stack_trace handler."""
         response = message_handlers.handle_message(
             {
@@ -312,7 +317,7 @@ class TestMessageHandlers:
         assert isinstance(data["frames"], list)
         assert data["is_active"] is False
 
-    def test_handle_get_history(self, message_handlers):
+    def test_handle_get_history(self, message_handlers: Any) -> None:
         """Test get_history handler."""
         # Execute some code first
         message_handlers.handle_message(
@@ -347,7 +352,7 @@ class TestMessageHandlers:
         assert len(items) == 1
         assert items[0]["input"] == "z = 100"
 
-    def test_kernel_not_available(self, message_handlers):
+    def test_kernel_not_available(self, message_handlers: Any) -> None:
         """Test handling when kernel is not available."""
         message_handlers.kernel.is_available = False
 
@@ -366,7 +371,7 @@ class TestMessageHandlers:
         assert response["success"] is True
         assert response["data"]["available"] is False
 
-    def test_response_structure(self, message_handlers):
+    def test_response_structure(self, message_handlers: Any) -> None:
         """Test response message structure."""
         response = message_handlers.handle_message(
             {"id": "800", "type": "get_kernel_info"}
@@ -386,7 +391,7 @@ class TestMessageHandlers:
         assert "data" in response
         assert "error" not in response
 
-    def test_message_serialization(self):
+    def test_message_serialization(self) -> None:
         """Test message object serialization."""
         # Test Request
         request = Request(

@@ -262,36 +262,31 @@ class KernelInterface:
             # Capture stdout output
             stdout_text = stdout_buffer.getvalue()
             if stdout_text:
-                outputs.append(
-                    {
-                        "type": "stream",
-                        "name": "stdout",
-                        "text": stdout_text,
-                    }
-                )
+                stdout_output: Dict[str, Any] = {
+                    "type": "stream",
+                    "name": "stdout",
+                    "text": stdout_text,
+                }
+                outputs.append(stdout_output)
 
             # Capture stderr output
             stderr_text = stderr_buffer.getvalue()
             if stderr_text:
-                outputs.append(
-                    {
-                        "type": "stream",
-                        "name": "stderr",
-                        "text": stderr_text,
-                    }
-                )
+                stderr_output: Dict[str, Any] = {
+                    "type": "stream",
+                    "name": "stderr",
+                    "text": stderr_text,
+                }
+                outputs.append(stderr_output)
 
             # Capture result output
             if result.result is not None:
-                outputs.append(
-                    {
-                        "type": "execute_result",
-                        "data": {"text/plain": repr(result.result)},
-                        "execution_count": self.shell.execution_count
-                        if self.shell
-                        else 0,
-                    }
-                )
+                result_output: Dict[str, Any] = {
+                    "type": "execute_result",
+                    "data": {"text/plain": repr(result.result)},
+                    "execution_count": self.shell.execution_count if self.shell else 0,
+                }
+                outputs.append(result_output)
 
             # Handle errors
             if result.error_in_exec:

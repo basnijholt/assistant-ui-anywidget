@@ -19,13 +19,13 @@ class EnhancedAgentWidget(anywidget.AnyWidget):
 
     # Existing traits
     message = traitlets.Unicode("").tag(sync=True)
-    chat_history = traitlets.List([]).tag(sync=True)
-    action_buttons = traitlets.List([]).tag(sync=True)
+    chat_history: traitlets.List = traitlets.List([]).tag(sync=True)
+    action_buttons: traitlets.List = traitlets.List([]).tag(sync=True)
 
     # New traits for kernel interaction
     kernel_state = traitlets.Dict({}).tag(sync=True)
     code_result = traitlets.Dict({}).tag(sync=True)
-    variables_info = traitlets.List([]).tag(sync=True)
+    variables_info: traitlets.List = traitlets.List([]).tag(sync=True)
     debug_info = traitlets.Dict({}).tag(sync=True)
 
     # AI assistant configuration
@@ -385,7 +385,7 @@ for var in list(globals().keys()):
 
     def _get_kernel_context(self) -> Dict[str, Any]:
         """Get current kernel context for the AI."""
-        context = {}
+        context: Dict[str, Any] = {}
 
         # Add kernel info
         context["kernel_info"] = self.kernel.get_kernel_info()

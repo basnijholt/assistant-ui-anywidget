@@ -100,7 +100,7 @@ def should_continue(state: MessagesState) -> str:
         return "tools"
 
     # Otherwise, we're done
-    return END
+    return str(END)
 
 
 def should_require_approval(state: MessagesState) -> str:
@@ -109,7 +109,7 @@ def should_require_approval(state: MessagesState) -> str:
 
     # If no tool calls, we're done
     if not isinstance(last_message, AIMessage) or not last_message.tool_calls:
-        return END
+        return str(END)
 
     # Check if any tool call is execute_code
     for tool_call in last_message.tool_calls:

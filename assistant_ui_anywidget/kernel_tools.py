@@ -52,7 +52,7 @@ class InspectVariableTool(BaseTool):
     args_schema: Type[BaseModel] = InspectVariableInput
     kernel: Any = Field(default=None, exclude=True)  # Exclude from serialization
 
-    def __init__(self, kernel: KernelInterface, **kwargs):
+    def __init__(self, kernel: KernelInterface, **kwargs: Any) -> None:
         super().__init__(kernel=kernel, **kwargs)
 
     def _run(self, variable_name: str, deep: bool = False) -> str:
@@ -100,7 +100,7 @@ class ExecuteCodeTool(BaseTool):
     return_direct: bool = False  # Don't return directly to user
     kernel: Any = Field(default=None, exclude=True)
 
-    def __init__(self, kernel: KernelInterface, **kwargs):
+    def __init__(self, kernel: KernelInterface, **kwargs: Any) -> None:
         super().__init__(kernel=kernel, **kwargs)
 
     def _run(self, code: str, silent: bool = False) -> str:
@@ -153,7 +153,7 @@ class GetVariablesTool(BaseTool):
     args_schema: Type[BaseModel] = GetVariablesInput
     kernel: Any = Field(default=None, exclude=True)
 
-    def __init__(self, kernel: KernelInterface, **kwargs):
+    def __init__(self, kernel: KernelInterface, **kwargs: Any) -> None:
         super().__init__(kernel=kernel, **kwargs)
 
     def _run(
@@ -202,7 +202,7 @@ class KernelInfoTool(BaseTool):
     description: str = "Get information about the current kernel state including availability and execution count."
     kernel: Any = Field(default=None, exclude=True)
 
-    def __init__(self, kernel: KernelInterface, **kwargs):
+    def __init__(self, kernel: KernelInterface, **kwargs: Any) -> None:
         super().__init__(kernel=kernel, **kwargs)
 
     def _run(self) -> str:

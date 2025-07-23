@@ -17,8 +17,8 @@ class ConversationLogger:
         """
         self.log_dir = Path(log_dir or "ai_conversation_logs")
         self.log_dir.mkdir(exist_ok=True)
-        self.current_log_file = None
-        self.session_start = None
+        self.current_log_file: Optional[Path] = None
+        self.session_start: Optional[datetime] = None
 
     def start_session(self) -> Path:
         """Start a new logging session with timestamp."""
@@ -61,6 +61,9 @@ class ConversationLogger:
             self.start_session()
 
         # Load existing data
+        assert (
+            self.current_log_file is not None
+        )  # mypy hint: guaranteed by start_session()
         with open(self.current_log_file, "r") as f:
             data = json.load(f)
 
