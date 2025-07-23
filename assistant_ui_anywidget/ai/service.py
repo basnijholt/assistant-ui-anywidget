@@ -135,6 +135,16 @@ class AIService:
                     provider = available_providers[0][0]
                     logger.info(f"Using {provider} for model {model}")
 
+        # Ensure we never call init_chat_model with None values
+        if not model or not provider:
+            logger.warning(
+                f"Could not determine model ({model}) or provider ({provider}). "
+                "Falling back to mock model."
+            )
+            from .mock import MockLLM
+
+            return MockLLM()
+
         try:
             return init_chat_model(model=model, model_provider=provider, **kwargs)
         except Exception as e:
