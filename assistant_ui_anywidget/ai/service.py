@@ -103,7 +103,7 @@ class AIService:
             available_providers.append(("google_genai", "gemini-2.5-flash"))
 
         # If provider/model not specified, auto-select based on availability
-        if not provider:
+        if not provider or provider == "auto":
             if available_providers:
                 provider, default_model = available_providers[0]
                 if not model:
@@ -122,7 +122,7 @@ class AIService:
                 return MockLLM()
 
         # If only model specified, try to infer provider
-        elif not provider and model:
+        elif (not provider or provider == "auto") and model:
             if "gpt" in model.lower():
                 provider = "openai"
             elif "claude" in model.lower():
