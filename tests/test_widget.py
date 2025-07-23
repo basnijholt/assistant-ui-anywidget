@@ -23,7 +23,7 @@ def test_widget_creation() -> None:
 
     # Assert the widget was created successfully
     assert widget is not None
-    assert hasattr(widget, 'message')
+    assert hasattr(widget, "message")
 
 
 if __name__ == "__main__":
