@@ -447,7 +447,11 @@ class LangGraphAIService:
             tool_calls = []
 
             if isinstance(last_message, AIMessage):
-                content = str(last_message.content or "")
+                # Handle cases where content might be a list
+                if isinstance(last_message.content, list):
+                    content = "\n".join(str(item) for item in last_message.content)
+                else:
+                    content = str(last_message.content or "")
                 if last_message.tool_calls:
                     tool_calls = [
                         {"name": tc.get("name"), "args": tc.get("args")}
