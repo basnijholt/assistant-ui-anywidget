@@ -9,7 +9,13 @@ from typing import Any, Dict, List, Optional
 from dotenv import load_dotenv
 from langchain.chat_models import init_chat_model
 from langchain_core.language_models import BaseChatModel
-from langchain_core.messages import AIMessage, AnyMessage, HumanMessage, SystemMessage
+from langchain_core.messages import (
+    AIMessage,
+    AnyMessage,
+    HumanMessage,
+    SystemMessage,
+    ToolMessage,
+)
 from langgraph.checkpoint.memory import MemorySaver
 from langgraph.graph import END, StateGraph
 from langgraph.prebuilt import ToolNode
@@ -350,6 +356,26 @@ When they ask about notebook cells or previous code, refer to your context.
 Be helpful and explain what you're doing.{approval_note}"""
 
 
+def _format_messages_for_api_compatibility(
+    messages: List[AnyMessage],
+) -> List[AnyMessage]:
+    """Convert ToolMessages to HumanMessages for API compatibility.
+
+    Some APIs (like Gemini) don't support ToolMessage objects directly,
+    so we convert them to HumanMessage objects with appropriate content.
+    """
+    formatted_messages = []
+    for msg in messages:
+        if isinstance(msg, ToolMessage):
+            # Convert ToolMessage to HumanMessage for API compatibility
+            formatted_messages.append(
+                HumanMessage(content=f"Tool result: {msg.content}")
+            )
+        else:
+            formatted_messages.append(msg)
+    return formatted_messages
+
+
 def create_call_model(
     llm: BaseChatModel, tools: List[Any], require_approval: bool
 ) -> Any:
@@ -364,7 +390,10 @@ def create_call_model(
             system_msg = SystemMessage(content=get_system_prompt(require_approval))
             messages = [system_msg] + messages
 
-        response = llm.bind_tools(tools).invoke(messages)
+        # Format messages for API compatibility
+        formatted_messages = _format_messages_for_api_compatibility(messages)
+
+        response = llm.bind_tools(tools).invoke(formatted_messages)
         return {"messages": [response]}
 
     return call_model
