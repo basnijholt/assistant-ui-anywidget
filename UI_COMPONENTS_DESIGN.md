@@ -49,11 +49,13 @@ interface HeaderProps {
 ```
 
 **Visual Design:**
+
 - Height: 48px
 - Background: Gradient from #f8f9fa to #ffffff
 - Border-bottom: 1px solid #e0e0e0
 
 **Features:**
+
 - Kernel status indicator (green/yellow/red dot)
 - AI model dropdown selector
 - Settings gear icon
@@ -62,6 +64,7 @@ interface HeaderProps {
 ### 2. Chat Panel
 
 #### Message List
+
 ```typescript
 interface MessageListProps {
   messages: Message[];
@@ -72,10 +75,10 @@ interface MessageListProps {
 
 interface Message {
   id: string;
-  role: 'user' | 'assistant' | 'system';
+  role: "user" | "assistant" | "system";
   content: string;
   timestamp: number;
-  status?: 'sending' | 'sent' | 'error';
+  status?: "sending" | "sent" | "error";
   metadata?: {
     executionTime?: number;
     tokensUsed?: number;
@@ -85,6 +88,7 @@ interface Message {
 ```
 
 **Message Rendering:**
+
 - User messages: Right-aligned, blue background (#007bff)
 - Assistant messages: Left-aligned, white background
 - System messages: Center-aligned, gray background
@@ -92,6 +96,7 @@ interface Message {
 - Variable mentions: Clickable, underlined, tooltip on hover
 
 #### Input Area
+
 ```typescript
 interface InputAreaProps {
   onSubmit: (message: string) => void;
@@ -102,6 +107,7 @@ interface InputAreaProps {
 ```
 
 **Features:**
+
 - Multi-line textarea with auto-resize
 - Markdown preview toggle
 - Code mode toggle (switches to monospace font)
@@ -110,6 +116,7 @@ interface InputAreaProps {
 - Voice input button (future)
 
 **Keyboard Shortcuts:**
+
 - `Ctrl/Cmd + Enter`: Send message
 - `Ctrl/Cmd + K`: Toggle code mode
 - `Ctrl/Cmd + /`: Show shortcuts
@@ -138,6 +145,7 @@ interface Variable {
 ```
 
 **Layout:**
+
 ```
 ┌─────────────────────────────────┐
 │ 🔍 Search variables...          │
@@ -156,6 +164,7 @@ interface Variable {
 ```
 
 **Features:**
+
 - Search with regex support
 - Type-based filtering
 - Sort by name/type/size/modified
@@ -177,6 +186,7 @@ interface CodePreviewProps {
 ```
 
 **Features:**
+
 - Syntax-highlighted code editor
 - Line numbers
 - Execute button with loading state
@@ -196,6 +206,7 @@ interface DebugPanelProps {
 ```
 
 **Layout:**
+
 ```
 ┌─────────────────────────────────┐
 │ ⚠️ NameError                    │
@@ -231,6 +242,7 @@ interface ActionButton {
 ```
 
 **Common Actions:**
+
 - 🔄 Retry last execution
 - 🧹 Clear variables
 - 📊 Show data summary
@@ -240,24 +252,30 @@ interface ActionButton {
 ## Interaction Patterns
 
 ### 1. Drag and Drop
+
 - Variables can be dragged from explorer to chat input
 - Code blocks can be dragged to create new cells
 - Files can be dragged to upload (future)
 
 ### 2. Context Menus
+
 Right-click on:
+
 - Variables: Inspect, Plot, Delete, Copy name
 - Code blocks: Execute, Edit, Copy, Create cell
 - Messages: Copy, Retry, Delete
 
 ### 3. Tooltips
+
 Show on hover for:
+
 - Variables: Type, size, preview
 - Truncated text: Full content
 - Buttons: Keyboard shortcuts
 - Status indicators: Detailed status
 
 ### 4. Progressive Disclosure
+
 - Collapsed sections expand on click
 - "Show more" for long outputs
 - Accordion pattern for nested data
@@ -266,17 +284,18 @@ Show on hover for:
 ## Visual Design System
 
 ### Color Palette
+
 ```css
 :root {
   /* Primary */
   --primary-blue: #007bff;
   --primary-hover: #0056b3;
-  
+
   /* Status */
   --success: #28a745;
   --warning: #ffc107;
   --danger: #dc3545;
-  
+
   /* Grays */
   --gray-100: #f8f9fa;
   --gray-200: #e9ecef;
@@ -287,7 +306,7 @@ Show on hover for:
   --gray-700: #495057;
   --gray-800: #343a40;
   --gray-900: #212529;
-  
+
   /* Semantic */
   --text-primary: var(--gray-900);
   --text-secondary: var(--gray-600);
@@ -298,6 +317,7 @@ Show on hover for:
 ```
 
 ### Typography
+
 ```css
 .heading-large {
   font-size: 18px;
@@ -312,7 +332,7 @@ Show on hover for:
 }
 
 .code-text {
-  font-family: 'SF Mono', 'Monaco', 'Inconsolata', monospace;
+  font-family: "SF Mono", "Monaco", "Inconsolata", monospace;
   font-size: 13px;
 }
 
@@ -323,6 +343,7 @@ Show on hover for:
 ```
 
 ### Spacing System
+
 ```css
 /* 4px base unit */
 --space-xs: 4px;
@@ -333,6 +354,7 @@ Show on hover for:
 ```
 
 ### Animation Patterns
+
 ```css
 /* Smooth transitions */
 .transition-all {
@@ -342,14 +364,20 @@ Show on hover for:
 /* Hover effects */
 .hover-lift:hover {
   transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
 }
 
 /* Loading states */
 @keyframes pulse {
-  0% { opacity: 1; }
-  50% { opacity: 0.5; }
-  100% { opacity: 1; }
+  0% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+  100% {
+    opacity: 1;
+  }
 }
 
 .loading {
@@ -360,6 +388,7 @@ Show on hover for:
 ## Responsive Design
 
 ### Breakpoints
+
 ```css
 /* Mobile: < 640px */
 /* Tablet: 640px - 1024px */
@@ -367,6 +396,7 @@ Show on hover for:
 ```
 
 ### Mobile Adaptations
+
 - Side panel becomes bottom sheet
 - Simplified variable explorer
 - Touch-friendly tap targets (min 44px)
@@ -375,18 +405,21 @@ Show on hover for:
 ## Accessibility Features
 
 ### Keyboard Navigation
+
 - Tab order follows visual hierarchy
 - Focus indicators clearly visible
 - All actions keyboard accessible
 - Escape key closes modals
 
 ### Screen Reader Support
+
 - Semantic HTML structure
 - ARIA labels for icons
 - Live regions for updates
 - Descriptive button text
 
 ### Visual Accessibility
+
 - High contrast mode support
 - Customizable font size
 - Color-blind friendly palette
@@ -398,22 +431,22 @@ Show on hover for:
 interface UIState {
   // Layout
   sidePanelOpen: boolean;
-  sidePanelTab: 'variables' | 'history' | 'debug';
-  
+  sidePanelTab: "variables" | "history" | "debug";
+
   // Chat
-  inputMode: 'text' | 'code';
+  inputMode: "text" | "code";
   isProcessing: boolean;
-  
+
   // Modals
   codePreview: {
     open: boolean;
     code: string;
     language: string;
   };
-  
+
   // Preferences
-  theme: 'light' | 'dark';
-  fontSize: 'small' | 'medium' | 'large';
+  theme: "light" | "dark";
+  fontSize: "small" | "medium" | "large";
   showLineNumbers: boolean;
   autoScroll: boolean;
 }
@@ -422,16 +455,19 @@ interface UIState {
 ## Performance Optimizations
 
 ### Virtualization
+
 - Virtual scrolling for long message lists
 - Lazy rendering of variable explorer items
 - On-demand syntax highlighting
 
 ### Debouncing
+
 - Search input (300ms)
 - Window resize (100ms)
 - Scroll events (50ms)
 
 ### Caching
+
 - Parsed markdown content
 - Syntax highlighted code
 - Variable previews
@@ -439,12 +475,14 @@ interface UIState {
 ## Future Enhancements
 
 ### Version 2.0
+
 - Dark mode theme
 - Custom keyboard shortcuts
 - Plugin system for extensions
 - Collaborative features
 
 ### Version 3.0
+
 - Voice interaction
 - AR/VR visualization
 - Advanced data visualization
@@ -453,6 +491,7 @@ interface UIState {
 ## Implementation Guidelines
 
 ### Component Structure
+
 ```typescript
 // Example component template
 export const VariableExplorer: React.FC<VariableExplorerProps> = ({
@@ -464,18 +503,18 @@ export const VariableExplorer: React.FC<VariableExplorerProps> = ({
   // Hooks
   const [searchTerm, setSearchTerm] = useState('');
   const debouncedSearch = useDebounce(searchTerm, 300);
-  
+
   // Computed values
   const filteredVariables = useMemo(() => {
     return filterVariables(variables, filter, debouncedSearch);
   }, [variables, filter, debouncedSearch]);
-  
+
   // Event handlers
   const handleInspect = useCallback((variable: Variable) => {
     trackEvent('variable_inspected', { type: variable.type });
     onInspect(variable);
   }, [onInspect]);
-  
+
   // Render
   return (
     <div className="variable-explorer">
@@ -486,6 +525,7 @@ export const VariableExplorer: React.FC<VariableExplorerProps> = ({
 ```
 
 ### Testing Strategy
+
 - Unit tests for all components
 - Integration tests for workflows
 - Visual regression tests
