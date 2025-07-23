@@ -4,7 +4,7 @@ import os
 from typing import Any
 from unittest.mock import MagicMock, patch
 
-from assistant_ui_anywidget.ai.service import AIService
+from assistant_ui_anywidget.ai import AIService
 from assistant_ui_anywidget.kernel_interface import KernelInterface
 
 
@@ -38,9 +38,9 @@ class TestAIServiceRegression:
         # Create a scenario where we have API keys but init_chat_model fails
         with (
             patch.dict(os.environ, {"OPENAI_API_KEY": "test-key"}, clear=True),
-            patch("assistant_ui_anywidget.ai.service.load_dotenv"),
+            patch("assistant_ui_anywidget.ai.simple_service.load_dotenv"),
             patch(
-                "assistant_ui_anywidget.ai.service.init_chat_model",
+                "assistant_ui_anywidget.ai.simple_service.init_chat_model",
                 side_effect=mock_init_chat_model_error,
             ),
         ):
@@ -70,9 +70,9 @@ class TestAIServiceRegression:
 
         with (
             patch.dict(os.environ, {"OPENAI_API_KEY": "test-key"}, clear=True),
-            patch("assistant_ui_anywidget.ai.service.load_dotenv"),
+            patch("assistant_ui_anywidget.ai.simple_service.load_dotenv"),
             patch(
-                "assistant_ui_anywidget.ai.service.init_chat_model",
+                "assistant_ui_anywidget.ai.simple_service.init_chat_model",
                 side_effect=mock_init_chat_model_with_none_check,
             ),
         ):
@@ -91,11 +91,11 @@ class TestAIServiceRegression:
         # This should trigger the fix that prevents calling init_chat_model with None values
         with (
             patch.dict(os.environ, {}, clear=True),
-            patch("assistant_ui_anywidget.ai.service.load_dotenv"),
+            patch("assistant_ui_anywidget.ai.simple_service.load_dotenv"),
         ):
             # This should never call init_chat_model because both model and provider will be None
             with patch(
-                "assistant_ui_anywidget.ai.service.init_chat_model"
+                "assistant_ui_anywidget.ai.simple_service.init_chat_model"
             ) as mock_init:
                 service = AIService(kernel=mock_kernel, model=None, provider=None)
 
@@ -114,7 +114,7 @@ class TestAIServiceRegression:
         # Test with only OpenAI key
         with patch.dict(os.environ, {"OPENAI_API_KEY": "test-key"}, clear=True):
             with patch(
-                "assistant_ui_anywidget.ai.service.init_chat_model"
+                "assistant_ui_anywidget.ai.simple_service.init_chat_model"
             ) as mock_init:
                 mock_init.return_value = MagicMock()
 
@@ -133,7 +133,7 @@ class TestAIServiceRegression:
 
         with patch.dict(os.environ, {"OPENAI_API_KEY": "test-key"}, clear=True):
             with patch(
-                "assistant_ui_anywidget.ai.service.init_chat_model"
+                "assistant_ui_anywidget.ai.simple_service.init_chat_model"
             ) as mock_init:
                 mock_init.return_value = MagicMock()
 
@@ -153,7 +153,7 @@ class TestAIServiceRegression:
         # Clear all environment variables and prevent .env loading
         with (
             patch.dict(os.environ, {}, clear=True),
-            patch("assistant_ui_anywidget.ai.service.load_dotenv"),
+            patch("assistant_ui_anywidget.ai.simple_service.load_dotenv"),
         ):
             service = AIService(kernel=mock_kernel)
 
@@ -180,14 +180,12 @@ class TestAIServiceRegression:
 
         with (
             patch.dict(os.environ, {}, clear=True),
-            patch("assistant_ui_anywidget.ai.service.load_dotenv"),
+            patch("assistant_ui_anywidget.ai.simple_service.load_dotenv"),
         ):
             service = AIService(kernel=mock_kernel)
 
             # This should not crash and should return a response
-            import asyncio
-
-            result = asyncio.run(service.chat("hi"))
+            result = service.chat("hi")
 
             assert result is not None
             assert hasattr(result, "content")

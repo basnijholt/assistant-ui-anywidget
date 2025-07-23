@@ -56,7 +56,6 @@ class AgentWidget(anywidget.AnyWidget):
                 kernel=self.kernel,
                 model=ai_config.get("model"),
                 provider=ai_config.get("provider"),
-                require_approval=ai_config.get("require_approval", True),
             )
 
         # Set up message handling
@@ -113,7 +112,7 @@ class AgentWidget(anywidget.AnyWidget):
                 context = self._get_kernel_context()
 
                 # Get AI response
-                result = self.ai_service.chat_sync(
+                result = self.ai_service.chat(
                     message=user_text,
                     thread_id=self._get_thread_id(),
                     context=context,
@@ -416,7 +415,5 @@ for var in list(globals().keys()):
 
     def get_conversation_log_path(self) -> Optional[str]:
         """Get the current conversation log file path."""
-        if self.ai_service and hasattr(self.ai_service, "conversation_logger"):
-            log_path = self.ai_service.conversation_logger.get_current_log_path()
-            return str(log_path) if log_path else None
+        # Simplified service does not include conversation logging
         return None
