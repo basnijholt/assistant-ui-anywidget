@@ -48,18 +48,57 @@ The widget will:
 
 ## Usage in Jupyter
 
-```bash
+### 🚀 **Recommended: Global Agent Interface**
+
+The new global agent interface prevents keyboard shortcut conflicts and provides better notebook experience:
+
+```python
 # Start Jupyter notebook
 uv run jupyter notebook
 
-# Open demo_kernel_assistant.ipynb or create a new notebook:
+# NEW RECOMMENDED WAY - Simple and safe!
+from assistant_ui_anywidget import get_agent
+
+# Get the global agent (creates if doesn't exist)
+agent = get_agent()
+agent
+
+# Even simpler - one line to display
+from assistant_ui_anywidget import display_agent
+display_agent()
+
+# Or use the short alias
+from assistant_ui_anywidget import agent
+my_agent = agent()
+```
+
+**🔥 Key Benefits:**
+- **Keyboard Safety**: Uses **Ctrl+D** to send messages (not Shift+Enter)
+- **No Conflicts**: Never accidentally execute cells when chatting
+- **Global State**: Same agent instance across all notebook cells
+- **Auto-Config**: Sensible defaults for notebook use
+
+### ⚙️ **Custom Configuration**
+
+```python
+# With custom configuration
+agent = get_agent(ai_config={
+    'provider': 'openai',         # Force specific provider
+    'model': 'gpt-4',            # Choose model
+    'require_approval': False,    # Auto-approve code execution
+    'temperature': 0.7           # Response creativity
+})
+
+# Reset to create fresh instance
+agent = get_agent(reset=True)
+```
+
+### 🔧 **Advanced: Direct Widget (Legacy)**
+
+```python
+# Direct widget creation (still works, but not recommended for notebooks)
 from assistant_ui_anywidget import EnhancedAgentWidget
 
-# Create the AI-powered widget (auto-detects providers)
-widget = EnhancedAgentWidget()
-widget
-
-# Or with specific configuration:
 widget = EnhancedAgentWidget(
     ai_config={
         'provider': 'google_genai',  # Force specific provider
@@ -67,6 +106,7 @@ widget = EnhancedAgentWidget(
         'require_approval': False,    # Auto-approve code execution
     }
 )
+widget
 ```
 
 ## Features
@@ -210,6 +250,7 @@ mypy python                      # Type checking
    - Python → JS: `widget.send()` method
    - JS → Python: `model.send()` method
    - Bidirectional message passing with JSON
+   - **Keyboard**: Ctrl+D (or Cmd+D) sends messages safely without cell execution conflicts
 
 ## Troubleshooting
 
