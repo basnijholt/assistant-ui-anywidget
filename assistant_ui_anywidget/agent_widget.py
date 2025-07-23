@@ -504,5 +504,7 @@ for var in list(globals().keys()):
 
     def get_conversation_log_path(self) -> Optional[str]:
         """Get the current conversation log file path."""
-        # Simplified service does not include conversation logging
+        if self.ai_service and hasattr(self.ai_service, "conversation_logger"):
+            log_path = self.ai_service.conversation_logger.get_current_log_path()
+            return str(log_path) if log_path else None
         return None

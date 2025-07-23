@@ -10,6 +10,7 @@ from langchain.chat_models import init_chat_model
 from langchain_core.language_models import BaseLanguageModel
 
 from ..kernel_interface import KernelInterface
+from .logger import ConversationLogger
 
 # Load environment variables from .env file
 load_dotenv()
@@ -41,6 +42,11 @@ class SimpleAIService:
         self.kernel = kernel
         self.llm = self._init_llm(model, provider, **kwargs)
         self.conversations: Dict[str, List[Dict[str, str]]] = {}
+
+        # Initialize conversation logger
+        self.conversation_logger = ConversationLogger()
+        log_path = self.conversation_logger.start_session()
+        logger.info(f"Started conversation logging to: {log_path}")
 
     def _init_llm(
         self,
@@ -136,6 +142,26 @@ class SimpleAIService:
             # Extract content
             content = str(response.content) if response.content else ""
 
+            # Extract tool call info if present
+            tool_call_info = []
+            if hasattr(response, "tool_calls") and response.tool_calls:
+                for tc in response.tool_calls:
+                    tool_call_info.append(
+                        {
+                            "name": tc.get("name"),
+                            "args": tc.get("args"),
+                        }
+                    )
+
+            # Log conversation
+            self.conversation_logger.log_conversation(
+                thread_id=thread_id,
+                user_message=message,
+                ai_response=content,
+                tool_calls=tool_call_info,
+                context=context,
+            )
+
             # Store conversation
             self.conversations[thread_id].extend(
                 [
@@ -148,8 +174,19 @@ class SimpleAIService:
 
         except Exception as e:
             logger.error(f"Error in chat: {e}")
+            error_msg = f"I encountered an error: {str(e)}"
+
+            # Log error
+            self.conversation_logger.log_conversation(
+                thread_id=thread_id,
+                user_message=message,
+                ai_response=error_msg,
+                context=context,
+                error=str(e),
+            )
+
             return ChatResult(
-                content=f"I encountered an error: {str(e)}",
+                content=error_msg,
                 thread_id=thread_id,
                 success=False,
                 error=str(e),

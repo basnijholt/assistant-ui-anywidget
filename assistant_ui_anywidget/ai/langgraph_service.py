@@ -16,6 +16,7 @@ from langgraph.prebuilt import ToolNode
 from langgraph.types import interrupt
 
 from ..kernel_interface import KernelInterface
+from .logger import ConversationLogger
 
 # Load environment variables
 load_dotenv()
@@ -61,6 +62,11 @@ class LangGraphAIService:
 
         # Create the agent graph
         self.agent = self._create_agent_graph()
+
+        # Initialize conversation logger
+        self.conversation_logger = ConversationLogger()
+        log_path = self.conversation_logger.start_session()
+        logger.info(f"Started conversation logging to: {log_path}")
 
     def _init_llm(
         self,
@@ -274,6 +280,17 @@ class LangGraphAIService:
             if "__interrupt__" in response:
                 interrupt_info = response["__interrupt__"][0]
                 interrupt_msg = interrupt_info.value.get("message", "Approval needed")
+
+                # Log interruption
+                self.conversation_logger.log_conversation(
+                    thread_id=thread_id,
+                    user_message=message
+                    if isinstance(message, str)
+                    else "Approval response",
+                    ai_response="[Awaiting approval]",
+                    context=context,
+                )
+
                 return ChatResult(
                     content="",
                     thread_id=thread_id,
@@ -302,6 +319,28 @@ class LangGraphAIService:
                 # Convert non-string content
                 formatted_content = str(content)
 
+            # Extract tool call info if present
+            tool_call_info = []
+            if isinstance(last_message, AIMessage) and last_message.tool_calls:
+                for tc in last_message.tool_calls:
+                    tool_call_info.append(
+                        {
+                            "name": tc.get("name"),
+                            "args": tc.get("args"),
+                        }
+                    )
+
+            # Log conversation
+            self.conversation_logger.log_conversation(
+                thread_id=thread_id,
+                user_message=message
+                if isinstance(message, str)
+                else "Approval response",
+                ai_response=formatted_content,
+                tool_calls=tool_call_info,
+                context=context,
+            )
+
             return ChatResult(
                 content=formatted_content,
                 thread_id=thread_id,
@@ -310,8 +349,19 @@ class LangGraphAIService:
 
         except Exception as e:
             logger.error(f"Error in chat: {e}")
+            error_msg = f"I encountered an error: {str(e)}"
+
+            # Log error
+            self.conversation_logger.log_conversation(
+                thread_id=thread_id,
+                user_message=message if isinstance(message, str) else "Unknown message",
+                ai_response=error_msg,
+                context=context,
+                error=str(e),
+            )
+
             return ChatResult(
-                content=f"I encountered an error: {str(e)}",
+                content=error_msg,
                 thread_id=thread_id,
                 success=False,
                 error=str(e),
