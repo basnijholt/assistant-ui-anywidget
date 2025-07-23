@@ -43,12 +43,12 @@ build-backend = "hatchling.build"
 
 [tool.hatch.build]
 include = [
-    "python/**/*.py",
+    "assistant_ui_anywidget/**/*.py",
     "frontend/dist/**/*"
 ]
 
 [tool.hatch.build.targets.wheel]
-packages = ["python"]
+packages = ["assistant_ui_anywidget"]
 
 [project.urls]
 Homepage = "https://github.com/your-org/assistant-ui-anywidget"
@@ -91,7 +91,7 @@ addopts = [
     "-ra",
     "--strict-markers",
     "--strict-config",
-    "--cov=python",
+    "--cov=assistant_ui_anywidget",
     "--cov-report=term-missing",
     "--cov-report=html",
     "--cov-report=xml",
@@ -108,7 +108,7 @@ markers = [
 ]
 
 [tool.coverage.run]
-source = ["python", "."]
+source = ["assistant_ui_anywidget", "."]
 omit = [
     "tests/*",
     "test_*",

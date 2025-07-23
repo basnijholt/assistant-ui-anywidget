@@ -10,7 +10,7 @@ import sys
 # Add the python module to the path
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "python"))  # noqa: PTH118, PTH120
 
-from agent_widget import AgentWidget
+from assistant_ui_anywidget.agent_widget import AgentWidget
 
 
 class TestChatHistorySynchronization:

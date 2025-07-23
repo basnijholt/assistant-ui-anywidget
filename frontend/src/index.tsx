@@ -68,7 +68,7 @@ const styles = `
 
 type ActionButton = string | { text: string; color?: string; icon?: string };
 
-function ChatWidget() {
+export function ChatWidget() {
   const [input, setInput] = useState("");
   const [chatHistory] = useModelState("chat_history");
   const [actionButtons] = useModelState<ActionButton[]>("action_buttons");

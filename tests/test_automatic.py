@@ -23,7 +23,7 @@ def create_test_notebook() -> dict:
                     "import sys\n",
                     "import os\n",
                     "sys.path.insert(0, os.path.join(os.getcwd(), 'python'))\n",
-                    "from agent_widget import AgentWidget",
+                    "from assistant_ui_anywidget.agent_widget import AgentWidget",
                 ],
             },
             {
@@ -77,7 +77,7 @@ def run_automatic_test() -> bool:
     # Test 1: Widget creation
     print("\n1. Testing widget creation...")
     try:
-        from agent_widget import AgentWidget  # noqa: PLC0415
+        from assistant_ui_anywidget.agent_widget import AgentWidget  # noqa: PLC0415
 
         widget = AgentWidget()
         print(f"   ✓ Widget created: {widget.__class__.__name__}")
