@@ -20,6 +20,15 @@ def test_ai_integration():
 
     print("✓ Widget created successfully")
     print(f"✓ Kernel available: {widget.kernel.is_available}")
+    
+    # Initialize kernel state if needed
+    if widget.kernel.is_available:
+        # Execute some code to create variables
+        widget.kernel.execute_code("x = 42")
+        widget.kernel.execute_code("y = 'hello'")
+        widget.kernel.execute_code("import pandas as pd")
+        widget.kernel.execute_code("df = pd.DataFrame({'A': [1, 2, 3], 'B': [4, 5, 6]})")
+    
     print(f"✓ AI service initialized: {widget.ai_service is not None}")
     print(
         f"✓ AI provider: {widget.ai_service.llm._llm_type if hasattr(widget.ai_service.llm, '_llm_type') else 'unknown'}"
@@ -44,6 +53,19 @@ def test_ai_integration():
     if len(widget.chat_history) > 2:
         last_message = widget.chat_history[-1]
         print(f"✓ Commands work: {last_message['content'][:50]}...")
+        
+    # Clear history for next test
+    widget.clear_chat_history()
+    
+    # Test AI tool usage - ask to run df.info()
+    widget._handle_message(widget, {"type": "user_message", "text": "Run df.info()"})
+    if widget.chat_history:
+        print(f"✓ Code execution test: {widget.chat_history[-1]['content'][:50]}...")
+    
+    # Test if AI can inspect variables
+    widget._handle_message(widget, {"type": "user_message", "text": "What is x?"})
+    if len(widget.chat_history) > 2:
+        print(f"✓ Variable inspection: {widget.chat_history[-1]['content'][:50]}...")
 
     print("\nAll tests passed! AI integration is working.")
 

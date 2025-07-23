@@ -45,8 +45,9 @@ class InspectVariableTool(BaseTool):
 
     name: str = "inspect_variable"
     description: str = (
-        "Inspect a variable in the Jupyter kernel to get detailed information "
-        "including type, size, shape (for arrays/dataframes), and preview."
+        "Inspect a variable in the Jupyter kernel to get detailed information. Use this when users ask "
+        "'what is in [variable]', 'show me [variable]', or want details about a specific variable. "
+        "Returns type, size, shape (for arrays/dataframes), and a preview of the data."
     )
     args_schema: Type[BaseModel] = InspectVariableInput
     kernel: Any = Field(default=None, exclude=True)  # Exclude from serialization
@@ -91,8 +92,9 @@ class ExecuteCodeTool(BaseTool):
 
     name: str = "execute_code"
     description: str = (
-        "Execute Python code in the Jupyter kernel. Use this to run calculations, "
-        "create new variables, or modify existing ones. Returns the output and any errors."
+        "Execute Python code in the Jupyter kernel. Use this whenever a user asks you to 'run', 'execute', "
+        "or 'calculate' something. Examples: df.info(), df.head(), calculations, creating plots, etc. "
+        "This tool runs the exact code you provide and returns the output."
     )
     args_schema: Type[BaseModel] = ExecuteCodeInput
     return_direct: bool = False  # Don't return directly to user
@@ -145,8 +147,8 @@ class GetVariablesTool(BaseTool):
 
     name: str = "get_variables"
     description: str = (
-        "Get a list of all variables in the Jupyter kernel namespace. "
-        "Useful for understanding what data is available to work with."
+        "Get a list of all variables in the Jupyter kernel namespace. Use this when users ask to "
+        "'show variables', 'list variables', or want to see what's available in the kernel."
     )
     args_schema: Type[BaseModel] = GetVariablesInput
     kernel: Any = Field(default=None, exclude=True)
