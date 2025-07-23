@@ -22,7 +22,7 @@ This document outlines the plan for integrating a local vector database to index
 │                                          ▼                     │
 │                              ┌─────────────────────┐          │
 │                              │  Local Vector DB    │          │
-│                              │  (ChromaDB/Qdrant)  │          │
+│                              │  (ChromaDB       )  │          │
 │                              └─────────────────────┘          │
 │                                          │                     │
 │                                          ▼                     │
@@ -40,7 +40,7 @@ This document outlines the plan for integrating a local vector database to index
 
 ### Vector Database Options
 
-#### Option 1: ChromaDB (Recommended)
+#### ChromaDB (Recommended)
 
 ```python
 # Pros:
@@ -53,34 +53,6 @@ This document outlines the plan for integrating a local vector database to index
 # Cons:
 - Limited scalability
 - Fewer advanced features
-```
-
-#### Option 2: Qdrant
-
-```python
-# Pros:
-- High performance
-- Advanced filtering
-- Production-ready
-- REST API
-
-# Cons:
-- Requires separate service
-- More complex setup
-```
-
-#### Option 3: LanceDB
-
-```python
-# Pros:
-- Embedded, serverless
-- Very fast
-- Low memory footprint
-- Native Python support
-
-# Cons:
-- Newer, less mature
-- Smaller community
 ```
 
 ### Embedding Model Options

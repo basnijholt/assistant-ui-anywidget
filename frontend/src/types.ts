@@ -41,7 +41,7 @@ export interface VariableInfo {
 }
 
 export interface GetVariablesRequest extends Request {
-  type: 'get_variables';
+  type: "get_variables";
   params?: {
     filter?: {
       types?: string[];
@@ -50,14 +50,14 @@ export interface GetVariablesRequest extends Request {
       max_preview_size?: number;
     };
     sort?: {
-      by: 'name' | 'type' | 'size' | 'modified';
-      order: 'asc' | 'desc';
+      by: "name" | "type" | "size" | "modified";
+      order: "asc" | "desc";
     };
   };
 }
 
 export interface GetVariablesResponse extends Response {
-  type: 'get_variables';
+  type: "get_variables";
   data: {
     variables: VariableInfo[];
     total_count: number;
@@ -67,10 +67,10 @@ export interface GetVariablesResponse extends Response {
 
 // Code execution types
 export interface ExecuteCodeRequest extends Request {
-  type: 'execute_code';
+  type: "execute_code";
   params: {
     code: string;
-    mode?: 'exec' | 'eval' | 'single';
+    mode?: "exec" | "eval" | "single";
     capture_output?: boolean;
     silent?: boolean;
     store_result?: boolean;
@@ -79,7 +79,7 @@ export interface ExecuteCodeRequest extends Request {
 }
 
 export interface ExecuteCodeResponse extends Response {
-  type: 'execute_code';
+  type: "execute_code";
   data: {
     execution_count: number;
     outputs: Output[];
@@ -89,8 +89,8 @@ export interface ExecuteCodeResponse extends Response {
 }
 
 export interface Output {
-  type: 'stream' | 'display_data' | 'execute_result' | 'error';
-  name?: 'stdout' | 'stderr';
+  type: "stream" | "display_data" | "execute_result" | "error";
+  name?: "stdout" | "stderr";
   text?: string;
   data?: Record<string, unknown>;
   metadata?: Record<string, unknown>;
@@ -99,7 +99,7 @@ export interface Output {
 
 // Variable inspection types
 export interface InspectVariableRequest extends Request {
-  type: 'inspect_variable';
+  type: "inspect_variable";
   params: {
     name: string;
     deep?: boolean;
@@ -110,7 +110,7 @@ export interface InspectVariableRequest extends Request {
 }
 
 export interface InspectVariableResponse extends Response {
-  type: 'inspect_variable';
+  type: "inspect_variable";
   data: {
     name: string;
     info: DetailedVariableInfo;
@@ -142,7 +142,7 @@ export interface AttributeInfo {
 // Kernel state types
 export interface KernelState {
   available: boolean;
-  status: 'idle' | 'busy' | 'error' | 'not_connected';
+  status: "idle" | "busy" | "error" | "not_connected";
   execution_count: number;
   namespace_size: number;
   variables_by_type: Record<string, number>;
@@ -150,7 +150,7 @@ export interface KernelState {
 
 // Message types
 export interface ChatMessage {
-  role: 'user' | 'assistant' | 'system';
+  role: "user" | "assistant" | "system";
   content: string;
   timestamp?: number;
   metadata?: {
@@ -169,19 +169,19 @@ export interface ActionButton {
 
 // Error codes
 export enum ErrorCode {
-  UNKNOWN_ERROR = 'UNKNOWN_ERROR',
-  INVALID_REQUEST = 'INVALID_REQUEST',
-  PERMISSION_DENIED = 'PERMISSION_DENIED',
-  RATE_LIMITED = 'RATE_LIMITED',
-  VARIABLE_NOT_FOUND = 'VARIABLE_NOT_FOUND',
-  VARIABLE_TOO_LARGE = 'VARIABLE_TOO_LARGE',
-  INSPECTION_FAILED = 'INSPECTION_FAILED',
-  EXECUTION_ERROR = 'EXECUTION_ERROR',
-  EXECUTION_TIMEOUT = 'EXECUTION_TIMEOUT',
-  SYNTAX_ERROR = 'SYNTAX_ERROR',
-  KERNEL_NOT_READY = 'KERNEL_NOT_READY',
-  KERNEL_DEAD = 'KERNEL_DEAD',
-  KERNEL_BUSY = 'KERNEL_BUSY',
+  UNKNOWN_ERROR = "UNKNOWN_ERROR",
+  INVALID_REQUEST = "INVALID_REQUEST",
+  PERMISSION_DENIED = "PERMISSION_DENIED",
+  RATE_LIMITED = "RATE_LIMITED",
+  VARIABLE_NOT_FOUND = "VARIABLE_NOT_FOUND",
+  VARIABLE_TOO_LARGE = "VARIABLE_TOO_LARGE",
+  INSPECTION_FAILED = "INSPECTION_FAILED",
+  EXECUTION_ERROR = "EXECUTION_ERROR",
+  EXECUTION_TIMEOUT = "EXECUTION_TIMEOUT",
+  SYNTAX_ERROR = "SYNTAX_ERROR",
+  KERNEL_NOT_READY = "KERNEL_NOT_READY",
+  KERNEL_DEAD = "KERNEL_DEAD",
+  KERNEL_BUSY = "KERNEL_BUSY",
 }
 
 // Widget model state

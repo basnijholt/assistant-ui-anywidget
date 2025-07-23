@@ -19,7 +19,7 @@ This document outlines the core principles and practices for developing this pro
 
 - **Read the Plan**: Always start by reading `PLAN.md` for the current task.
 - **Explore the Codebase**: List existing files and read the `README.md` to understand the project's structure and purpose.
-- **Consult Documentation**: Review the Crew AI documentation (https://docs.crewai.com/llms-full.txt and https://docs.crewai.com/llms.txt) to understand agent capabilities.
+- **Consult Documentation**: Review the Crew AI documentation (https://langchain-ai.github.io/langgraph/llms.txt and https://langchain-ai.github.io/langgraph/llms-full.txt) to understand agent capabilities.
 
 ### Step 2: Environment & Dependencies
 

@@ -1,20 +1,22 @@
 """Mock LLM for testing and when no API is configured."""
 
-from typing import Any, List, Optional
+from typing import Any, List, Optional, Sequence, Union
 from langchain_core.language_models import BaseChatModel
 from langchain_core.messages import AIMessage, BaseMessage
 from langchain_core.outputs import ChatResult, ChatGeneration
 from langchain_core.callbacks import CallbackManagerForLLMRun
+from langchain_core.tools import BaseTool
+from langchain_core.runnables import Runnable
 
 
 class MockLLM(BaseChatModel):
     """Mock LLM that provides helpful responses without calling an API."""
-    
+
     @property
     def _llm_type(self) -> str:
         """Return identifier of llm type."""
         return "mock"
-    
+
     def _generate(
         self,
         messages: List[BaseMessage],
@@ -29,19 +31,19 @@ class MockLLM(BaseChatModel):
             if msg.type == "human":
                 last_message = msg.content
                 break
-        
+
         # Generate a helpful response
         response = self._get_mock_response(last_message)
-        
+
         message = AIMessage(content=response)
         generation = ChatGeneration(message=message)
-        
+
         return ChatResult(generations=[generation])
-    
+
     def _get_mock_response(self, message: str) -> str:
         """Generate a mock response based on the message."""
         message_lower = message.lower()
-        
+
         if any(greeting in message_lower for greeting in ["hello", "hi", "hey"]):
             return (
                 "Hello! I'm a mock AI assistant. While I can't provide intelligent responses, "
@@ -51,7 +53,7 @@ class MockLLM(BaseChatModel):
                 "2. Set your API key: `export OPENAI_API_KEY='your-key'`\n\n"
                 "Try asking me to show variables or execute code!"
             )
-        
+
         elif "variable" in message_lower or "namespace" in message_lower:
             return (
                 "I can help you explore variables! While I'm just a mock AI, "
@@ -61,8 +63,12 @@ class MockLLM(BaseChatModel):
                 "- Ask me to 'show the type of x' (for any variable x)\n\n"
                 "I'll use the appropriate tools to get real information from your kernel!"
             )
-        
-        elif "execute" in message_lower or "run" in message_lower or "calculate" in message_lower:
+
+        elif (
+            "execute" in message_lower
+            or "run" in message_lower
+            or "calculate" in message_lower
+        ):
             return (
                 "I can execute code in your kernel! For example:\n\n"
                 "- 'Calculate 2 + 2'\n"
@@ -71,7 +77,7 @@ class MockLLM(BaseChatModel):
                 "Note: As a mock AI, I'll execute simple requests but won't provide "
                 "intelligent code generation. Install a real AI provider for that!"
             )
-        
+
         elif "help" in message_lower:
             return (
                 "I'm a mock AI assistant with kernel access. Here's what I can do:\n\n"
@@ -86,8 +92,10 @@ class MockLLM(BaseChatModel):
                 "3. Restart the kernel\n\n"
                 "Even as a mock, I have real access to your kernel!"
             )
-        
-        elif any(word in message_lower for word in ["error", "debug", "problem", "issue"]):
+
+        elif any(
+            word in message_lower for word in ["error", "debug", "problem", "issue"]
+        ):
             return (
                 "I can help you debug! While I'm a mock AI, I can:\n\n"
                 "- Check your variables: 'Show me all variables'\n"
@@ -95,7 +103,7 @@ class MockLLM(BaseChatModel):
                 "- Look at error details: 'Show me the last error'\n\n"
                 "For intelligent debugging assistance, please set up a real AI provider."
             )
-        
+
         else:
             return (
                 f"I understood: '{message}'\n\n"
@@ -106,3 +114,12 @@ class MockLLM(BaseChatModel):
                 "- Show kernel information\n\n"
                 "For better assistance, please configure an AI provider with an API key."
             )
+
+    def bind_tools(
+        self,
+        tools: Sequence[Union[BaseTool, type[BaseTool], dict]],
+        **kwargs: Any,
+    ) -> Runnable[Any, Any]:
+        """Bind tools to the model for compatibility."""
+        # Return self since mock doesn't actually use tools
+        return self

@@ -40,7 +40,8 @@ GOOGLE_API_KEY=...              # For Gemini Pro
 ```
 
 The widget will:
-- Automatically load API keys from `.env` 
+
+- Automatically load API keys from `.env`
 - Use the first available provider (OpenAI → Anthropic → Google)
 - Fall back to a helpful mock AI if no keys are set
 - Work perfectly with just one provider (e.g., only Google)
@@ -71,6 +72,7 @@ widget = EnhancedAgentWidget(
 ## Features
 
 ### AI Capabilities
+
 - ✅ **Multi-provider AI support** - OpenAI, Anthropic, Google (automatic detection)
 - ✅ **Automatic provider selection** - Uses any available API key
 - ✅ **Environment variable loading** - Reads from `.env` files via python-dotenv
@@ -79,6 +81,7 @@ widget = EnhancedAgentWidget(
 - ✅ **Fallback mock AI** - Works without API keys for development
 
 ### Core Features
+
 - ✅ **Production-ready chat interface** with React and TypeScript
 - ✅ **Jupyter kernel access** - Read variables, execute code, debug errors
 - ✅ **Bidirectional communication** between Python and JavaScript
