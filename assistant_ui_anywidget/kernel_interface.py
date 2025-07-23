@@ -153,7 +153,7 @@ class KernelContext:
 class AIConfig:
     """AI configuration settings."""
 
-    model: Optional[str] = "gpt-4"
+    model: Optional[str] = None
     provider: Optional[str] = None
     temperature: float = 0.7
     max_tokens: int = 2000

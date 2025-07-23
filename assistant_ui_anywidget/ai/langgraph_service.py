@@ -95,7 +95,22 @@ def init_llm(
         for prov, default_model, env_var in providers:
             if os.getenv(env_var):
                 try:
-                    use_model = model or default_model
+                    # For auto-detection, use the provider's default model unless
+                    # the provided model is compatible with this provider
+                    if model:
+                        # Check if the provided model is compatible with this provider
+                        if prov == "openai" and model.startswith(("gpt-", "o1-")):
+                            use_model = model
+                        elif prov == "anthropic" and model.startswith("claude-"):
+                            use_model = model
+                        elif prov == "google_genai" and model.startswith("gemini-"):
+                            use_model = model
+                        else:
+                            # Model not compatible, use provider default
+                            use_model = default_model
+                    else:
+                        use_model = default_model
+
                     return init_chat_model(
                         model=use_model, model_provider=prov, **kwargs
                     )
