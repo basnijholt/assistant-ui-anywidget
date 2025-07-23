@@ -24,6 +24,10 @@ def test_ai_integration():
     print(f"✓ AI service initialized: {widget.ai_service is not None}")
     print(f"✓ AI provider: {widget.ai_service.llm._llm_type if hasattr(widget.ai_service.llm, '_llm_type') else 'unknown'}")
     
+    # Check logging
+    log_path = widget.get_conversation_log_path()
+    print(f"✓ Conversation logging to: {log_path}")
+    
     # Test a simple message
     widget._handle_message(widget, {'type': 'user_message', 'text': 'Hello!'})
     

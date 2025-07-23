@@ -397,3 +397,10 @@ for var in list(globals().keys()):
             context['last_error'] = last_error
         
         return context
+    
+    def get_conversation_log_path(self) -> Optional[str]:
+        """Get the current conversation log file path."""
+        if hasattr(self.ai_service, 'conversation_logger'):
+            log_path = self.ai_service.conversation_logger.get_current_log_path()
+            return str(log_path) if log_path else None
+        return None
