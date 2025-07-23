@@ -9,11 +9,12 @@ from typing import Any, Dict, List, Optional
 from dotenv import load_dotenv
 from langchain.chat_models import init_chat_model
 from langchain_core.language_models import BaseChatModel
-from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
+from langchain_core.messages import AIMessage, AnyMessage, HumanMessage, SystemMessage
 from langgraph.checkpoint.memory import MemorySaver
-from langgraph.graph import END, MessagesState, StateGraph
+from langgraph.graph import END, StateGraph
 from langgraph.prebuilt import ToolNode
 from langgraph.types import interrupt
+from pydantic import BaseModel, ConfigDict, Field
 
 from ..kernel_interface import KernelInterface, KernelContext
 from .logger import ConversationLogger
@@ -22,6 +23,42 @@ from .logger import ConversationLogger
 load_dotenv()
 
 logger = logging.getLogger(__name__)
+
+
+class AgentState(BaseModel):
+    """Pydantic model for the agent graph state.
+
+    This replaces the default MessagesState with runtime validation
+    and better type safety for our AI assistant.
+    """
+
+    # Core conversation messages
+    messages: List[AnyMessage] = Field(
+        default_factory=list, description="List of conversation messages"
+    )
+
+    # Optional kernel context information
+    kernel_context: Optional[Dict[str, Any]] = Field(
+        default=None, description="Current kernel state and context information"
+    )
+
+    # Thread/session information
+    thread_id: Optional[str] = Field(
+        default=None, description="Unique identifier for the conversation thread"
+    )
+
+    # Approval state for code execution
+    pending_approval: bool = Field(
+        default=False, description="Whether code execution is pending approval"
+    )
+
+    # Error tracking
+    last_error: Optional[str] = Field(
+        default=None, description="Last error message if any"
+    )
+
+    # Use modern Pydantic v2 configuration
+    model_config = ConfigDict(arbitrary_types_allowed=True)
 
 
 @dataclass
@@ -84,9 +121,12 @@ def init_llm(
         return MockLLM()
 
 
-def should_continue(state: MessagesState) -> str:
+def should_continue(state: AgentState) -> str:
     """Determine if we should continue to tools or end."""
-    last_message = state["messages"][-1]
+    if not state.messages:
+        return str(END)
+
+    last_message = state.messages[-1]
 
     if isinstance(last_message, AIMessage) and last_message.tool_calls:
         return "tools"
@@ -94,9 +134,12 @@ def should_continue(state: MessagesState) -> str:
     return str(END)
 
 
-def should_require_approval(state: MessagesState) -> str:
+def should_require_approval(state: AgentState) -> str:
     """Determine if we need approval before executing tools."""
-    last_message = state["messages"][-1]
+    if not state.messages:
+        return str(END)
+
+    last_message = state.messages[-1]
 
     # If no tool calls, we're done
     if not isinstance(last_message, AIMessage) or not last_message.tool_calls:
@@ -111,17 +154,20 @@ def should_require_approval(state: MessagesState) -> str:
     return "tools"
 
 
-def approval_node(state: MessagesState) -> Dict[str, List]:
+def approval_node(state: AgentState) -> Dict[str, Any]:
     """Node that handles approval for code execution."""
-    messages = state["messages"]
-    last_message = messages[-1]
+    if not state.messages:
+        return {}
+
+    last_message = state.messages[-1]
 
     # Extract code to be executed
     code_blocks = []
-    for tool_call in last_message.tool_calls:
-        if tool_call["name"] == "execute_code":
-            code = tool_call["args"]["code"]
-            code_blocks.append(code)
+    if isinstance(last_message, AIMessage) and last_message.tool_calls:
+        for tool_call in last_message.tool_calls:
+            if tool_call["name"] == "execute_code":
+                code = tool_call["args"]["code"]
+                code_blocks.append(code)
 
     # Create approval message
     approval_msg = "Approve code execution?\n\n"
@@ -134,10 +180,10 @@ def approval_node(state: MessagesState) -> Dict[str, List]:
     if decision != "approved":
         # User denied - return message
         denial_msg = HumanMessage(content="Code execution denied by user.")
-        return {"messages": [denial_msg]}
+        return {"messages": [denial_msg], "pending_approval": False}
 
     # Approved - continue to tools
-    return {}
+    return {"pending_approval": False}
 
 
 def create_kernel_tools(kernel: KernelInterface) -> List[Any]:
@@ -294,15 +340,14 @@ def create_call_model(
 ) -> Any:
     """Create the call_model function for the agent graph."""
 
-    def call_model(state: MessagesState) -> Dict[str, List]:
+    def call_model(state: AgentState) -> Dict[str, Any]:
         """Call the LLM with tools (synchronous version)."""
-        messages = state["messages"]
+        messages = state.messages
 
         # Add system message if not present
         if not messages or not isinstance(messages[0], SystemMessage):
-            messages = [
-                SystemMessage(content=get_system_prompt(require_approval))
-            ] + messages
+            system_msg = SystemMessage(content=get_system_prompt(require_approval))
+            messages = [system_msg] + messages
 
         response = llm.bind_tools(tools).invoke(messages)
         return {"messages": [response]}
@@ -317,7 +362,7 @@ def create_agent_graph(
     require_approval: bool,
 ) -> StateGraph:
     """Create the LangGraph agent with approval flow."""
-    graph = StateGraph(MessagesState)
+    graph = StateGraph(AgentState)
 
     # Create tools
     tools = create_kernel_tools(kernel)
@@ -414,7 +459,13 @@ class LangGraphAIService:
                         SystemMessage(content=build_context_message(context))
                     )
                 messages.append(HumanMessage(content=message))
-                payload = {"messages": messages}
+
+                # Create AgentState payload with additional context
+                payload = {
+                    "messages": messages,
+                    "thread_id": thread_id,
+                    "kernel_context": context.to_dict() if context else None,
+                }
 
             # Invoke the agent
             config = {"configurable": {"thread_id": thread_id}}
