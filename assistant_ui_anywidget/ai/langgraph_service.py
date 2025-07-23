@@ -495,6 +495,16 @@ class LangGraphAIService:
                 from langgraph.types import Command
 
                 payload = Command(resume="approved" if message else "denied")
+            elif message == "Approve":
+                # Button approval
+                from langgraph.types import Command
+
+                payload = Command(resume="approved")
+            elif message == "Deny":
+                # Button denial
+                from langgraph.types import Command
+
+                payload = Command(resume="denied")
             else:
                 # Normal message
                 messages = []
