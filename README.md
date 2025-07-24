@@ -27,16 +27,12 @@ An AI-powered chat widget for Jupyter notebooks that can directly access and man
 ## Installation
 
 ```bash
-# Install with all AI providers
-pip install assistant-ui-anywidget[ai]
-
-# Or install base package and add providers as needed
 pip install assistant-ui-anywidget
 ```
 
 ## Quick Start
 
-### 1. Set up AI (Optional)
+### 1. Set up AI Provider
 
 Create a `.env` file with your API keys:
 
@@ -46,7 +42,7 @@ ANTHROPIC_API_KEY=sk-ant-...    # For Claude
 GOOGLE_API_KEY=...              # For Gemini
 ```
 
-The widget automatically detects available providers. No keys? It'll use a mock AI for development.
+The widget automatically detects available providers. If no API keys are set, it falls back to a mock AI for development.
 
 ### 2. Use in Jupyter
 
@@ -116,7 +112,7 @@ The assistant can:
 **AI not responding?**
 
 - Verify your API keys in `.env` file
-- Check you have the AI extra: `pip install assistant-ui-anywidget[ai]`
+- Check that at least one API key is set correctly
 - The mock AI should work without any keys
 
 ## License
@@ -259,7 +255,7 @@ model.send({
 # Clone and setup
 git clone <repo>
 cd assistant-ui-anywidget
-uv sync --all-extras          # Install all dependencies
+uv sync                       # Install all dependencies
 source .venv/bin/activate     # Activate virtual environment
 
 # Build frontend
