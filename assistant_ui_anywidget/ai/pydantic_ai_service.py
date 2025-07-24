@@ -9,18 +9,12 @@ from dataclasses import dataclass
 from typing import Any, Dict, List, Optional
 
 from dotenv import load_dotenv
-from langchain_core.messages import (
-    AIMessage,
-    AnyMessage,
-    HumanMessage,
-)
 from langgraph.checkpoint.memory import MemorySaver
 from langgraph.graph import END, StateGraph
-from langgraph.graph.message import add_messages
 from langgraph.types import interrupt
 from pydantic import BaseModel, ConfigDict
 from pydantic_ai import Agent, RunContext
-from typing_extensions import Annotated
+from typing_extensions import Annotated, TypedDict
 
 from ..kernel_interface import KernelContext, KernelInterface
 from .logger import ConversationLogger
@@ -55,25 +49,26 @@ def _run_in_new_loop(coro: Any) -> Any:
         loop.close()
 
 
-class AgentState(BaseModel):
-    """LangGraph state that tracks conversation history with add_messages reducer."""
+# Simple message structure without LangChain dependencies
+@dataclass
+class Message:
+    role: str  # "user" or "assistant" 
+    content: str
 
-    # Core conversation messages with automatic add_messages reducer for memory
-    messages: Annotated[List[AnyMessage], add_messages] = []
+# Custom reducer function for messages
+def add_messages(left: List[Message], right: List[Message]) -> List[Message]:
+    """Add messages to the conversation history."""
+    return left + right
 
-    # Optional kernel context information
-    kernel_context: Optional[Dict[str, Any]] = None
-
-    # Thread/session information
-    thread_id: Optional[str] = None
-
-    # Approval state for code execution
-    pending_approval: bool = False
-
-    # Error tracking
-    last_error: Optional[str] = None
-
-    model_config = ConfigDict(arbitrary_types_allowed=True)
+class AgentState(TypedDict):
+    """Simple state for LangGraph without LangChain message dependencies."""
+    
+    # Conversation history with custom message type
+    messages: Annotated[List[Message], add_messages]
+    
+    # Optional fields
+    thread_id: Optional[str]
+    kernel_context: Optional[Dict[str, Any]]
 
 
 @dataclass
@@ -94,7 +89,7 @@ class ChatResult:
 
 
 # Define Pydantic AI tools for kernel interaction
-def create_pydantic_kernel_tools(kernel: KernelInterface) -> Dict[str, Any]:
+def create_pydantic_kernel_tools(kernel: KernelInterface, require_approval: bool = True) -> Dict[str, Any]:
     async def get_variables(ctx: RunContext[Any]) -> str:
         """List all variables in the kernel namespace."""
         if not kernel.is_available:
@@ -138,10 +133,33 @@ def create_pydantic_kernel_tools(kernel: KernelInterface) -> Dict[str, Any]:
         )
 
     async def execute_code(ctx: RunContext[Any], code: str) -> str:
-        """Execute Python code in the kernel. REQUIRES APPROVAL."""
+        """Execute Python code in the kernel."""
         if not kernel.is_available:
             return "Kernel not available"
-
+        
+        # If approval is required, trigger an interrupt
+        if require_approval:
+            # Import interrupt here to use it within the tool
+            from langgraph.types import interrupt
+            
+            approval_msg = (
+                f"Approve code execution?\n\n"
+                f"Code:\n```python\n{code}\n```\n\n"
+                f"Respond with 'Approve' or 'Deny'."
+            )
+            
+            # This will pause the graph execution
+            decision = interrupt({
+                "tool": "execute_code", 
+                "message": approval_msg,
+                "code": code
+            })
+            
+            # Check the decision
+            if str(decision).lower() not in ["approve", "approved", "yes", "y", "true"]:
+                return "Code execution denied by user."
+        
+        # Execute the code
         result = kernel.execute_code(code)
 
         if result.success:
@@ -289,29 +307,30 @@ def get_system_prompt(require_approval: bool = True, has_tools: bool = False) ->
     """Get system prompt."""
     if has_tools:
         approval_note = (
-            "\n\nIMPORTANT: The execute_code tool requires user approval. "
-            "Other tools (get_variables, inspect_variable, kernel_info) execute automatically."
+            "\n\nIMPORTANT: The execute_code tool requires user approval before running."
             if require_approval
             else ""
         )
 
         return f"""You are an AI assistant with access to a Jupyter kernel and notebook history.
 
-You can:
-- List variables with get_variables()
-- Inspect specific variables with inspect_variable(name)
-- Execute Python code with execute_code(code)
-- Check kernel status with kernel_info()
+You have access to the following tools:
+- get_variables(): List all variables in the kernel namespace
+- inspect_variable(variable_name): Get details about a specific variable
+- execute_code(code): Execute Python code in the kernel
+- kernel_info(): Get information about the kernel status
+
+IMPORTANT INSTRUCTIONS:
+1. For simple questions that you can answer directly (like "what is 2+2?"), just provide the answer.
+2. When users ask you to execute, run, or evaluate Python code, you MUST use the execute_code tool, even if the kernel appears unavailable.
+3. When users ask about variables, use get_variables() or inspect_variable().
+4. When users ask about the kernel, use kernel_info().
+5. CRITICAL: Always call execute_code() when requested, regardless of kernel status. The tool will handle any issues.
+6. Be helpful and explain what you're doing.
 
 NOTEBOOK ACCESS: You have access to recent notebook cell contents and outputs in your context.
 When users ask about "cell contents", "what code did I run", "notebook cells", or similar,
-refer to the RECENT NOTEBOOK CELLS section in your context which shows the actual code
-that was executed in previous cells.
-
-When users ask you to run or execute code, use execute_code().
-When they ask about variables, use get_variables() or inspect_variable().
-When they ask about notebook cells or previous code, refer to your context.
-Be helpful and explain what you're doing.{approval_note}"""
+refer to the RECENT NOTEBOOK CELLS section in your context.{approval_note}"""
     else:
         return """You are an AI assistant that helps with Python programming and data analysis.
 
@@ -323,83 +342,22 @@ Be helpful and provide clear explanations for any programming questions."""
 
 def should_continue(state: AgentState) -> str:
     """Determine if we should continue to tools or end."""
-    if not state.messages:
-        return str(END)
-
-    last_message = state.messages[-1]
-
-    if isinstance(last_message, AIMessage) and last_message.tool_calls:
-        return "tools"
-
+    # For now, we always end after the chat node
+    # Tool calling is handled within Pydantic AI
     return str(END)
 
 
 def should_require_approval(state: AgentState) -> str:
     """Determine if we need approval before executing tools."""
-    if not state.messages:
-        return str(END)
-
-    last_message = state.messages[-1]
-
-    # If no tool calls, we're done
-    if not isinstance(last_message, AIMessage) or not last_message.tool_calls:
-        return str(END)
-
-    # Check if any tool call is execute_code
-    for tool_call in last_message.tool_calls:
-        if tool_call["name"] == "execute_code":
-            return "approval"
-
-    # Other tools don't need approval
-    return "tools"
+    # Tool approval is now handled within Pydantic AI tools using interrupts
+    return str(END)
 
 
 def approval_node(state: AgentState) -> Dict[str, Any]:
     """Node that handles approval for code execution."""
-    if not state.messages:
-        return {}
-
-    # Find the most recent AIMessage with tool calls that needs approval
-    ai_message_with_tools = None
-    for message in reversed(state.messages):
-        if isinstance(message, AIMessage) and message.tool_calls:
-            # Check if any tool call is execute_code
-            for tool_call in message.tool_calls:
-                if tool_call["name"] == "execute_code":
-                    ai_message_with_tools = message
-                    break
-            if ai_message_with_tools:
-                break
-
-    # If no AIMessage with execute_code tool calls found, something is wrong
-    if not ai_message_with_tools:
-        logger.warning(
-            "Approval node called but no AIMessage with execute_code tool calls found"
-        )
-        return {"pending_approval": False}
-
-    # Extract code to be executed
-    code_blocks = []
-    for tool_call in ai_message_with_tools.tool_calls:
-        if tool_call["name"] == "execute_code":
-            code = tool_call["args"]["code"]
-            code_blocks.append(code)
-
-    # Create approval message
-    approval_msg = "Approve code execution?\n\n"
-    for i, code in enumerate(code_blocks, 1):
-        approval_msg += f"Code block {i}:\n```python\n{code}\n```\n\n"
-
-    # Interrupt for approval
-    decision = interrupt({"message": approval_msg, "code_blocks": code_blocks})
-
-    if decision != "approved":
-        # User denied - return message
-        denial_msg = HumanMessage(content="Code execution denied by user.")
-        return {"messages": [denial_msg], "pending_approval": False}
-
-    # Approved - continue to tools
-    return {"pending_approval": False}
+    # This function is no longer used as tool approval is handled
+    # within Pydantic AI tools using interrupts
+    return {}
 
 
 class PydanticAIService:
@@ -421,15 +379,15 @@ class PydanticAIService:
         model_string = init_pydantic_ai_model(model, provider, **kwargs)
         logger.info(f"Initializing Pydantic AI with model: {model_string}")
 
-        # Create Pydantic AI agent without tools first (for testing)
-        # tools = create_pydantic_kernel_tools(kernel)
-
-        # Create Pydantic AI agent with proper model string
+        # Create Pydantic AI agent with tools
+        tools = create_pydantic_kernel_tools(kernel, require_approval)
+        
+        # Create agent with tools
         try:
             self.agent = Agent(
                 model_string,
-                system_prompt=get_system_prompt(require_approval, has_tools=False),
-                # tools=list(tools.values()),  # Temporarily disabled
+                system_prompt=get_system_prompt(require_approval, has_tools=True),
+                tools=list(tools.values()),
             )
         except Exception as e:
             logger.warning(
@@ -437,8 +395,8 @@ class PydanticAIService:
             )
             self.agent = Agent(
                 "test",
-                system_prompt=get_system_prompt(require_approval, has_tools=False),
-                # tools=list(tools.values()),  # Temporarily disabled
+                system_prompt=get_system_prompt(require_approval, has_tools=True),
+                tools=list(tools.values()),
             )
 
         # Create memory checkpointer for LangGraph conversation persistence
@@ -457,38 +415,91 @@ class PydanticAIService:
         
         async def pydantic_ai_chat_node(state: AgentState) -> Dict[str, Any]:
             """LangGraph node that calls Pydantic AI for chat responses."""
-            # Get the most recent human message
-            last_human_message = None
-            for msg in reversed(state.messages):
-                if isinstance(msg, HumanMessage):
-                    last_human_message = msg
+            # Get the most recent user message
+            last_user_message = None
+            for msg in reversed(state["messages"]):
+                if msg.role == "user":
+                    last_user_message = msg
                     break
                     
-            if not last_human_message:
-                return {"messages": [AIMessage(content="No message to respond to.")]}
+            if not last_user_message:
+                return {"messages": [Message(role="assistant", content="No message to respond to.")]}
             
             # Build conversation context from LangGraph state to pass to Pydantic AI
-            if len(state.messages) > 1:
+            if len(state["messages"]) > 1:
                 # Include conversation history
                 conversation_parts = []
-                for msg in state.messages[:-1]:  # All except the current message
-                    if isinstance(msg, HumanMessage):
+                for msg in state["messages"][:-1]:  # All except the current message
+                    if msg.role == "user":
                         conversation_parts.append(f"User: {msg.content}")
-                    elif isinstance(msg, AIMessage):
+                    elif msg.role == "assistant":
                         conversation_parts.append(f"Assistant: {msg.content}")
                 
                 # Create prompt with conversation history
                 history = "\n".join(conversation_parts)
-                prompt = f"Previous conversation:\n{history}\n\nCurrent user message: {last_human_message.content}"
+                prompt = f"Previous conversation:\n{history}\n\nCurrent user message: {last_user_message.content}"
             else:
                 # First message, no history needed
-                prompt = last_human_message.content
+                prompt = last_user_message.content
             
             # Use Pydantic AI to generate response with conversation context
-            result = await self.agent.run(prompt)
-            
-            # Return AI response as a message - LangGraph will add it to state automatically
-            return {"messages": [AIMessage(content=result.output)]}
+            # Tools may trigger interrupts internally
+            try:
+                result = await self.agent.run(prompt)
+                response_text = str(result.output)
+                
+                # Fallback: Check if the AI mentioned executing code but didn't call the tool
+                # This handles cases where tool calling fails (e.g., with Gemini)
+                if self.require_approval and any(phrase in response_text.lower() for phrase in [
+                    "i'll execute", "i will execute", "executing", "let me execute",
+                    "i'll run", "i will run", "running the code"
+                ]):
+                    # Try to extract code from the message
+                    import re
+                    # Look for code blocks or inline code mentions
+                    code_match = re.search(r'```(?:python)?\n?(.*?)\n?```|`([^`]+)`|code:\s*(.+)', response_text, re.DOTALL | re.IGNORECASE)
+                    if code_match:
+                        code = code_match.group(1) or code_match.group(2) or code_match.group(3)
+                        code = code.strip()
+                        
+                        # Trigger interrupt for approval
+                        approval_msg = f"Approve code execution?\n\nCode:\n```python\n{code}\n```\n\nRespond with 'Approve' or 'Deny'."
+                        decision = interrupt({"message": approval_msg, "code": code})
+                        
+                        if str(decision).lower() in ["approve", "approved", "yes", "y", "true"]:
+                            # Execute the code
+                            exec_result = self.kernel.execute_code(code)
+                            
+                            if exec_result.success:
+                                output_parts = ["Code executed successfully."]
+                                if exec_result.outputs:
+                                    for output in exec_result.outputs:
+                                        if output["type"] == "execute_result":
+                                            output_parts.append(f"Result: {output['data']['text/plain']}")
+                                        elif output["type"] == "stream":
+                                            output_parts.append(f"Output: {output['text']}")
+                                response = "\n".join(output_parts)
+                            else:
+                                response = "Code execution failed."
+                                if exec_result.error:
+                                    response += f"\nError: {exec_result.error['message']}"
+                            
+                            return {"messages": [Message(role="assistant", content=response)]}
+                        else:
+                            return {"messages": [Message(role="assistant", content="Code execution denied by user.")]}
+                
+                # Return AI response as a message
+                return {"messages": [Message(role="assistant", content=response_text)]}
+            except Exception as e:
+                # Check if this is an interrupt (interrupts raise special exceptions)
+                # In LangGraph, interrupts bubble up as exceptions to be handled by the framework
+                if "Interrupt" in str(type(e)):
+                    # Re-raise the interrupt so LangGraph can handle it
+                    raise
+                else:
+                    # Handle other errors
+                    logger.error(f"Error in pydantic_ai_chat_node: {e}")
+                    return {"messages": [Message(role="assistant", content=f"Error: {str(e)}")]}
         
         # Build the LangGraph workflow
         workflow = StateGraph(AgentState)
@@ -510,19 +521,56 @@ class PydanticAIService:
             thread_id = str(uuid.uuid4())
 
         try:
-            # Handle approval responses
+            # Handle approval responses by resuming the interrupted workflow
             if isinstance(message, bool):
                 # This is an approval/denial response
+                from langgraph.types import Command
+                resume_value = "approved" if message else "denied"
+                config = {"configurable": {"thread_id": thread_id}}
+                final_state = await self.graph.ainvoke(Command(resume=resume_value), config=config)
+                
+                # Extract AI response from resumed workflow
+                ai_response = None
+                for msg in reversed(final_state["messages"]):
+                    if msg.role == "assistant":
+                        ai_response = msg.content
+                        break
+                        
+                if not ai_response:
+                    ai_response = "Approval processed" if message else "Execution denied"
+                    
                 return ChatResult(
-                    content="Approval processed" if message else "Execution denied",
+                    content=ai_response,
                     thread_id=thread_id,
                     success=True,
                 )
             elif message in ["Approve", "Deny"]:
                 # String-based approval
-                approved = message == "Approve"
+                from langgraph.types import Command
+                resume_value = "Approve" if message == "Approve" else "Deny"
+                config = {"configurable": {"thread_id": thread_id}}
+                final_state = await self.graph.ainvoke(Command(resume=resume_value), config=config)
+                
+                # Extract AI response from resumed workflow
+                ai_response = None
+                for msg in reversed(final_state["messages"]):
+                    if msg.role == "assistant":
+                        ai_response = msg.content
+                        break
+                        
+                if not ai_response:
+                    ai_response = "Execution approved" if message == "Approve" else "Execution denied"
+                    
+                # Log the approval response
+                self.conversation_logger.log_conversation(
+                    thread_id=thread_id,
+                    user_message=str(message),
+                    ai_response=ai_response,
+                    context=context.to_dict() if context else None,
+                )
+                    
                 return ChatResult(
-                    content="Execution approved" if approved else "Execution denied",
+                    content=ai_response,
                     thread_id=thread_id,
                     success=True,
                 )
@@ -534,20 +582,41 @@ class PydanticAIService:
                 full_message = f"Context: {context_msg}\n\nUser: {message}"
 
             # Create initial state with user message
-            initial_state = AgentState(
-                messages=[HumanMessage(content=full_message)],
-                thread_id=thread_id,
-                kernel_context=context.to_dict() if context else None,
-            )
+            initial_state = {
+                "messages": [Message(role="user", content=full_message)],
+                "thread_id": thread_id,
+                "kernel_context": context.to_dict() if context else None,
+            }
 
             # Run LangGraph workflow with thread-specific config for conversation persistence
             config = {"configurable": {"thread_id": thread_id}}
             final_state = await self.graph.ainvoke(initial_state, config=config)
 
+            # Check if the workflow was interrupted
+            if "__interrupt__" in final_state:
+                interrupt_data = final_state["__interrupt__"]
+                interrupt_msg = interrupt_data.value.get("message", "Approval required") if hasattr(interrupt_data, 'value') else "Approval required"
+                
+                # Log the interrupted conversation
+                self.conversation_logger.log_conversation(
+                    thread_id=thread_id,
+                    user_message=str(message),
+                    ai_response=interrupt_msg,
+                    context=context.to_dict() if context else None,
+                )
+                
+                return ChatResult(
+                    content=interrupt_msg,
+                    thread_id=thread_id,
+                    success=True,
+                    interrupted=True,
+                    interrupt_message=interrupt_msg,
+                )
+
             # Extract AI response from final state
             ai_response = None
             for msg in reversed(final_state["messages"]):
-                if isinstance(msg, AIMessage):
+                if msg.role == "assistant":
                     ai_response = msg.content
                     break
 
