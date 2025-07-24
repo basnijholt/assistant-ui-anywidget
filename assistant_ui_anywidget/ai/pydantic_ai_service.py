@@ -15,10 +15,12 @@ from langchain_core.messages import (
     HumanMessage,
 )
 from langgraph.checkpoint.memory import MemorySaver
-from langgraph.graph import END
+from langgraph.graph import END, StateGraph
+from langgraph.graph.message import add_messages
 from langgraph.types import interrupt
 from pydantic import BaseModel, ConfigDict
 from pydantic_ai import Agent, RunContext
+from typing_extensions import Annotated
 
 from ..kernel_interface import KernelContext, KernelInterface
 from .logger import ConversationLogger
@@ -54,10 +56,10 @@ def _run_in_new_loop(coro: Any) -> Any:
 
 
 class AgentState(BaseModel):
-    """Pydantic model for the agent graph state using Pydantic AI."""
+    """LangGraph state that tracks conversation history with add_messages reducer."""
 
-    # Core conversation messages (LangGraph compatible)
-    messages: List[AnyMessage] = []
+    # Core conversation messages with automatic add_messages reducer for memory
+    messages: Annotated[List[AnyMessage], add_messages] = []
 
     # Optional kernel context information
     kernel_context: Optional[Dict[str, Any]] = None
@@ -439,16 +441,63 @@ class PydanticAIService:
                 # tools=list(tools.values()),  # Temporarily disabled
             )
 
-        # Create memory for conversation history
+        # Create memory checkpointer for LangGraph conversation persistence
         self.memory = MemorySaver()
 
-        # Create LangGraph for orchestration (we'll implement this separately)
-        # For now, we'll use a simpler approach without the complex graph
+        # Create LangGraph workflow that uses Pydantic AI
+        self.graph = self._create_langgraph_workflow()
 
         # Initialize conversation logger
         self.conversation_logger = ConversationLogger()
         log_path = self.conversation_logger.start_session()
         logger.info(f"Started conversation logging to: {log_path}")
+
+    def _create_langgraph_workflow(self) -> StateGraph:
+        """Create LangGraph workflow that uses Pydantic AI for LLM interactions."""
+        
+        async def pydantic_ai_chat_node(state: AgentState) -> Dict[str, Any]:
+            """LangGraph node that calls Pydantic AI for chat responses."""
+            # Get the most recent human message
+            last_human_message = None
+            for msg in reversed(state.messages):
+                if isinstance(msg, HumanMessage):
+                    last_human_message = msg
+                    break
+                    
+            if not last_human_message:
+                return {"messages": [AIMessage(content="No message to respond to.")]}
+            
+            # Build conversation context from LangGraph state to pass to Pydantic AI
+            if len(state.messages) > 1:
+                # Include conversation history
+                conversation_parts = []
+                for msg in state.messages[:-1]:  # All except the current message
+                    if isinstance(msg, HumanMessage):
+                        conversation_parts.append(f"User: {msg.content}")
+                    elif isinstance(msg, AIMessage):
+                        conversation_parts.append(f"Assistant: {msg.content}")
+                
+                # Create prompt with conversation history
+                history = "\n".join(conversation_parts)
+                prompt = f"Previous conversation:\n{history}\n\nCurrent user message: {last_human_message.content}"
+            else:
+                # First message, no history needed
+                prompt = last_human_message.content
+            
+            # Use Pydantic AI to generate response with conversation context
+            result = await self.agent.run(prompt)
+            
+            # Return AI response as a message - LangGraph will add it to state automatically
+            return {"messages": [AIMessage(content=result.output)]}
+        
+        # Build the LangGraph workflow
+        workflow = StateGraph(AgentState)
+        workflow.add_node("chat", pydantic_ai_chat_node)
+        workflow.set_entry_point("chat")
+        workflow.add_edge("chat", END)
+        
+        # Compile with memory checkpointer - this enables conversation persistence
+        return workflow.compile(checkpointer=self.memory)
 
     async def chat_async(
         self,
@@ -484,34 +533,41 @@ class PydanticAIService:
                 context_msg = build_context_message(context)
                 full_message = f"Context: {context_msg}\n\nUser: {message}"
 
-            # Run Pydantic AI agent
-            result = await self.agent.run(full_message)
+            # Create initial state with user message
+            initial_state = AgentState(
+                messages=[HumanMessage(content=full_message)],
+                thread_id=thread_id,
+                kernel_context=context.to_dict() if context else None,
+            )
 
-            # Check if the result contains tool calls that need approval
-            needs_approval = False
-            interrupt_msg = None
+            # Run LangGraph workflow with thread-specific config for conversation persistence
+            config = {"configurable": {"thread_id": thread_id}}
+            final_state = await self.graph.ainvoke(initial_state, config=config)
 
-            # For now, we'll implement a simple approval check
-            # In a full implementation, we'd integrate this with LangGraph
-            # Temporarily disabled until we add tools back
-            # if "execute_code" in str(result):
-            #     needs_approval = True
-            #     interrupt_msg = f"Code execution requested: {message}"
+            # Extract AI response from final state
+            ai_response = None
+            for msg in reversed(final_state["messages"]):
+                if isinstance(msg, AIMessage):
+                    ai_response = msg.content
+                    break
+
+            if not ai_response:
+                raise ValueError("No AI response generated")
 
             # Log conversation
             self.conversation_logger.log_conversation(
                 thread_id=thread_id,
                 user_message=str(message),
-                ai_response=result.output,
+                ai_response=ai_response,
                 context=context.to_dict() if context else None,
             )
 
             return ChatResult(
-                content=result.output,
+                content=ai_response,
                 thread_id=thread_id,
                 success=True,
-                interrupted=needs_approval,
-                interrupt_message=interrupt_msg,
+                interrupted=False,
+                interrupt_message=None,
             )
 
         except Exception as e:

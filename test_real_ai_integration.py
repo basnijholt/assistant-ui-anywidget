@@ -322,6 +322,101 @@ class RealAIIntegrationTest:
             )
             return False
 
+    def test_memory_persistence(self, ai_service: PydanticAIService):
+        """Test that the AI remembers information from previous turns in the conversation."""
+        try:
+            # Use a consistent thread ID to maintain conversation context
+            thread_id = "memory_test_thread"
+            
+            # First interaction - provide name
+            logger.info("Step 1: Providing name to AI")
+            result1 = ai_service.chat("Hello! My name is John Smith.", thread_id=thread_id)
+            
+            if not result1.success or not result1.content:
+                self._record_test(
+                    "Memory Persistence - Initial",
+                    False,
+                    "Failed to establish initial conversation",
+                    result1.error,
+                )
+                return False
+            
+            logger.info(f"Step 1 Success: {result1.content[:100]}...")
+            
+            # Second interaction - ask for name (should remember)
+            logger.info("Step 2: Asking AI to recall the name")
+            result2 = ai_service.chat("What is my name?", thread_id=thread_id)
+            
+            name_remembered = (
+                result2.success 
+                and result2.content 
+                and ("John" in result2.content or "Smith" in result2.content)
+            )
+            
+            if not name_remembered:
+                self._record_test(
+                    "Memory Persistence - Name Recall",
+                    False,
+                    f"AI should remember the name John Smith but responded: {result2.content[:200]}",
+                    result2.error,
+                )
+                return False
+                
+            logger.info(f"Step 2 Success: AI remembered name - {result2.content[:100]}...")
+            
+            # Third interaction - provide additional information
+            logger.info("Step 3: Providing job information")
+            result3 = ai_service.chat("I work as a software engineer.", thread_id=thread_id)
+            
+            if not result3.success:
+                self._record_test(
+                    "Memory Persistence - Additional Info",
+                    False,
+                    "Failed to provide additional information",
+                    result3.error,
+                )
+                return False
+                
+            logger.info(f"Step 3 Success: {result3.content[:100]}...")
+            
+            # Fourth interaction - ask about both pieces of information
+            logger.info("Step 4: Asking AI to recall both name and job")
+            result4 = ai_service.chat("Can you tell me my name and job?", thread_id=thread_id)
+            
+            full_memory_success = (
+                result4.success 
+                and result4.content
+                and ("John" in result4.content or "Smith" in result4.content)
+                and ("engineer" in result4.content.lower() or "software" in result4.content.lower())
+            )
+            
+            if not full_memory_success:
+                self._record_test(
+                    "Memory Persistence - Full Recall",
+                    False,
+                    f"AI should remember both name and job but responded: {result4.content[:200]}",
+                    result4.error,
+                )
+                return False
+                
+            logger.info(f"Step 4 Success: AI remembered both name and job - {result4.content[:100]}...")
+            
+            self._record_test(
+                "Memory Persistence",
+                True,
+                "AI successfully remembered information across multiple conversation turns",
+            )
+            return True
+            
+        except Exception as e:
+            self._record_test(
+                "Memory Persistence",
+                False,
+                "Exception during memory persistence test",
+                str(e),
+            )
+            return False
+
     def test_error_handling(self, ai_service: PydanticAIService):
         """Test error handling with malformed requests."""
         try:
@@ -373,10 +468,13 @@ class RealAIIntegrationTest:
         # Test 4: Critical approval workflow test
         self.test_code_execution_approval_workflow(ai_service)
 
-        # Test 5: Widget integration
+        # Test 5: Memory persistence (CRITICAL TEST for the new issue)
+        self.test_memory_persistence(ai_service)
+
+        # Test 6: Widget integration
         self.test_widget_integration()
 
-        # Test 6: Error handling
+        # Test 7: Error handling
         self.test_error_handling(ai_service)
 
         return self._print_summary()
