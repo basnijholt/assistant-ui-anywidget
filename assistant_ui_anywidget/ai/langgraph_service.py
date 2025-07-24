@@ -4,7 +4,7 @@ import logging
 import os
 import uuid
 from dataclasses import dataclass
-from typing import Any, Dict, List, Optional
+from typing import Annotated, Any, Dict, List, Optional
 
 from dotenv import load_dotenv
 from langchain.chat_models import init_chat_model
@@ -18,11 +18,12 @@ from langchain_core.messages import (
 )
 from langgraph.checkpoint.memory import MemorySaver
 from langgraph.graph import END, StateGraph
+from langgraph.graph.message import add_messages
 from langgraph.prebuilt import ToolNode
 from langgraph.types import interrupt
 from pydantic import BaseModel, ConfigDict, Field
 
-from ..kernel_interface import KernelInterface, KernelContext
+from ..kernel_interface import KernelContext, KernelInterface
 from .logger import ConversationLogger
 
 # Load environment variables
@@ -39,7 +40,7 @@ class AgentState(BaseModel):
     """
 
     # Core conversation messages
-    messages: List[AnyMessage] = Field(
+    messages: Annotated[List[AnyMessage], add_messages] = Field(
         default_factory=list, description="List of conversation messages"
     )
 
