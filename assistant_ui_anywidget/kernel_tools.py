@@ -212,15 +212,26 @@ class KernelInfoTool(BaseTool):
         lines = [
             f"Kernel Status: {info['status']}",
             f"Available: {'Yes' if info['available'] else 'No'}",
-            f"Language: {info['language']}",
-            f"Execution Count: {info['execution_count']}",
-            f"Variables in Namespace: {info['namespace_size']}",
         ]
 
-        if info.get("variables_by_type"):
-            lines.append("\nVariables by Type:")
-            for type_name, count in info["variables_by_type"].items():
-                lines.append(f"  - {type_name}: {count}")
+        # Only add detailed info if kernel is available
+        if info["available"]:
+            lines.extend(
+                [
+                    f"Language: {info.get('language', 'Unknown')}",
+                    f"Execution Count: {info.get('execution_count', 0)}",
+                    f"Variables in Namespace: {info.get('namespace_size', 0)}",
+                ]
+            )
+
+            if info.get("variables_by_type"):
+                lines.append("\nVariables by Type:")
+                for type_name, count in info["variables_by_type"].items():
+                    lines.append(f"  - {type_name}: {count}")
+        else:
+            lines.append(
+                "No additional information available when kernel is not connected."
+            )
 
         return "\n".join(lines)
 

@@ -259,16 +259,39 @@ def _format_messages_for_api_compatibility(
 
     Some APIs (like Gemini) don't support ToolMessage objects directly,
     so we convert them to HumanMessage objects with appropriate content.
+    Also filters out messages with empty content that cause Gemini issues.
     """
     formatted_messages = []
     for msg in messages:
         if isinstance(msg, ToolMessage):
             # Convert ToolMessage to HumanMessage for API compatibility
+            tool_content = msg.content or "Tool completed successfully"
             formatted_messages.append(
-                HumanMessage(content=f"Tool result: {msg.content}")
+                HumanMessage(content=f"Tool result: {tool_content}")
             )
-        else:
+        elif isinstance(msg, AIMessage):
+            # Ensure AI messages have content, even if they only made tool calls
+            if not msg.content and msg.tool_calls:
+                # AI made tool calls but has no text content
+                msg_copy = AIMessage(
+                    content="I'll help you with that.", tool_calls=msg.tool_calls
+                )
+                formatted_messages.append(msg_copy)
+            elif msg.content:  # Only include messages with actual content
+                formatted_messages.append(msg)
+        elif hasattr(msg, "content") and msg.content:
+            # Only include other messages if they have content
             formatted_messages.append(msg)
+        elif isinstance(msg, (HumanMessage, SystemMessage)):
+            # Always include human and system messages, even if empty (add placeholder)
+            if not msg.content:
+                if isinstance(msg, HumanMessage):
+                    msg_copy = HumanMessage(content="[User interaction]")
+                else:
+                    msg_copy = SystemMessage(content="[System message]")
+                formatted_messages.append(msg_copy)
+            else:
+                formatted_messages.append(msg)
     return formatted_messages
 
 
