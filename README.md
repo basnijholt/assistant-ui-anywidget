@@ -6,6 +6,37 @@
 
 A production-ready AI-powered assistant widget with Jupyter kernel access, featuring automatic provider detection, comprehensive testing, and modern tooling.
 
+## 🤖 Project Context for AI Assistants
+
+This section provides immediate context for AI assistants (like Claude) working with this codebase.
+
+### Purpose & Value
+
+- **What**: An AI-powered chat widget for Jupyter notebooks with direct kernel access
+- **Why**: Enables natural language interaction with notebook variables, code execution, and debugging
+- **Core Innovation**: Prevents keyboard conflicts by using Ctrl+D instead of Shift+Enter for sending messages
+
+### Current State
+
+- **Maturity**: Production-ready with 75%+ test coverage
+- **Recent Work**: Major simplification effort reduced codebase by 31% (see docs/SIMPLIFICATION_PLAN.md)
+- **Architecture**: Functional programming style, minimal class hierarchies, aggressive code removal
+
+### Key Technical Decisions
+
+- **Bundled React**: All JS dependencies bundled into single 1.4MB file for maximum compatibility
+- **Global Agent Pattern**: Single instance per notebook session to avoid conflicts
+- **LangGraph Integration**: Optional state machine for approval workflows
+- **Auto-Detection**: Automatically finds and uses available AI providers (OpenAI → Anthropic → Google)
+
+### Development Philosophy (from CLAUDE.md)
+
+- **Simplicity First**: Implement the simplest solution that works
+- **No Backward Compatibility**: This is a new project, prioritize improvement
+- **Functional Style**: Prefer functions over complex class hierarchies
+- **Ruthless Removal**: Aggressively remove unused code
+- **Test Everything**: Never claim completion without running pytest
+
 ## Quick Start
 
 ```bash
@@ -143,32 +174,202 @@ widget
 - ✅ **Type safety** with full TypeScript and mypy coverage
 - ✅ **Code quality** with pre-commit hooks and linting
 
-## Project Structure
+## 📁 Project Structure & Architecture
 
 ```
-├── python/
-│   ├── __init__.py
-│   └── agent_widget.py     # Python widget implementation
-├── frontend/
+assistant-ui-anywidget/
+├── assistant_ui_anywidget/          # Main Python package
+│   ├── __init__.py                  # Package exports and global agent interface
+│   ├── agent_widget.py              # Core AgentWidget class (consolidated from 2 files)
+│   ├── global_agent.py              # Singleton pattern for notebook safety
+│   ├── kernel_interface.py          # Direct kernel access and variable inspection
+│   ├── kernel_tools.py              # LangChain tools for AI integration
+│   ├── simple_handlers.py           # Simplified message handling (reduced by 199 lines)
+│   ├── module_inspector.py          # Import analysis for AI context
+│   ├── ai/                          # AI service implementations
+│   │   ├── langgraph_service.py     # LangGraph approval workflows
+│   │   ├── mock.py                  # Development fallback AI
+│   │   └── prompt_config.py         # System prompts and configuration
+│   └── static/
+│       └── index.js                 # Bundled frontend (1.4MB, includes React)
+├── frontend/                        # TypeScript/React frontend
 │   ├── src/
-│   │   └── index.tsx       # React component
-│   ├── dist/
-│   │   └── index.js        # Built bundle (1.4MB)
-│   ├── package.json
-│   └── vite.config.ts      # Build configuration
-├── tests/
-│   ├── conftest.py         # pytest fixtures and configuration
-│   ├── test_widget_basic.py      # Basic widget tests
-│   ├── test_chat_synchronization_pytest.py  # Comprehensive sync tests
-│   ├── run_tests.py        # Legacy test runner
-│   └── test_widget.ipynb   # Jupyter test notebook
-├── pyproject.toml          # Python dependencies
-└── README.md
+│   │   ├── index.tsx                # Main chat interface component
+│   │   ├── VariableExplorer.tsx     # Kernel variable browser
+│   │   ├── kernelApi.ts             # API client for kernel communication
+│   │   └── types.ts                 # TypeScript interfaces
+│   ├── vite.config.ts               # Build configuration
+│   └── package.json                 # Frontend dependencies
+├── tests/                           # Comprehensive test suite (129 tests)
+│   ├── conftest.py                  # Shared pytest fixtures
+│   ├── test_widget_basic.py         # Core functionality tests
+│   ├── test_kernel_interface.py     # Kernel access tests
+│   ├── test_langgraph_approval.py   # Approval workflow tests
+│   └── test_ai_service_regression.py # AI provider tests
+├── docs/                            # Architecture documentation
+│   ├── DESIGN.md                    # Original design document
+│   ├── API_DESIGN.md                # Message protocol specification
+│   ├── IMPLEMENTATION_SUMMARY.md    # What's built vs planned
+│   └── SIMPLIFICATION_PLAN.md       # Recent refactoring progress
+├── examples/                        # Demo notebooks
+│   ├── demo_global_agent.ipynb      # Recommended usage pattern
+│   └── langgraph_approval_demo.ipynb # Approval workflow example
+├── CLAUDE.md                        # Development principles
+└── pyproject.toml                   # Python package configuration
+```
+
+### Architecture Overview
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                    Jupyter Notebook                          │
+├─────────────────────────────────────────────────────────────┤
+│                                                              │
+│  ┌────────────────┐         ┌─────────────────────────┐    │
+│  │ Python Kernel  │◄────────┤    AgentWidget          │    │
+│  │                │         │                         │    │
+│  │ - Variables    │         │ - Message Handler      │    │
+│  │ - Execution    │         │ - AI Service           │    │
+│  │ - State        │         │ - Kernel Interface     │    │
+│  └────────────────┘         └───────────┬─────────────┘    │
+│                                         │                    │
+│                                         │ anywidget         │
+│                                         ▼                    │
+│  ┌─────────────────────────────────────────────────────┐    │
+│  │           React Frontend (TypeScript)                │    │
+│  │                                                      │    │
+│  │  - Chat UI with Markdown rendering                  │    │
+│  │  - Variable Explorer for kernel inspection          │    │
+│  │  - Action buttons for quick commands                │    │
+│  │  - Ctrl+D to send (avoids notebook conflicts)       │    │
+│  └─────────────────────────────────────────────────────┘    │
+└─────────────────────────────────────────────────────────────┘
+```
+
+## 🛠️ Technical Details
+
+### Core Technologies
+
+- **Python**: 3.10+ with type hints throughout
+- **TypeScript**: Strict mode enabled for frontend
+- **React**: 18.x with hooks and functional components
+- **AnyWidget**: 0.9.0+ for Jupyter integration
+- **LangChain**: For AI tool calling and agent workflows
+- **Vite**: Modern frontend build system
+
+### Key Dependencies & Why
+
+- **anywidget**: Provides the Python ↔ JavaScript bridge for Jupyter
+- **langchain-community**: Multi-provider AI integration
+- **python-dotenv**: Automatic `.env` file loading for API keys
+- **@anywidget/react**: React integration for widget development
+- **react-markdown**: Markdown rendering in chat interface
+- **react-syntax-highlighter**: Code highlighting
+
+### Message Architecture
+
+```python
+# Python → JavaScript
+widget.send({
+    "type": "assistant_message",
+    "text": "Here's your analysis...",
+    "action_buttons": [{"label": "Run", "action": "execute"}]
+})
+
+# JavaScript → Python
+model.send({
+    type: "user_message",
+    text: "Show me all DataFrame variables"
+})
+```
+
+### AI Provider Integration
+
+1. **Auto-detection**: Checks environment for API keys in order
+2. **Provider Priority**: OpenAI → Anthropic → Google → Mock
+3. **Unified Interface**: Same API regardless of provider
+4. **Conversation Logging**: All interactions saved to `examples/ai_conversation_logs/`
+
+## 📋 Development Workflow
+
+### Initial Setup
+
+```bash
+# Clone and setup environment
+git clone <repo>
+cd assistant-ui-anywidget
+uv sync --all-extras          # Install all dependencies
+source .venv/bin/activate     # Activate virtual environment
+
+# Build frontend
+cd frontend
+npm install
+npm run build
+cd ..
+
+# Run tests to verify setup
+pytest
+```
+
+### Development Commands
+
+#### Adding Dependencies
+
+```bash
+uv add <package>              # Add runtime dependency
+uv add --dev <package>        # Add development dependency
+```
+
+#### Git Workflow (from CLAUDE.md)
+
+```bash
+# Check latest changes
+git diff origin/main | cat    # Note: pipe to cat or use --no-pager
+
+# Development cycle
+# 1. Make changes
+# 2. Run tests: pytest
+# 3. Run linting: pre-commit run --all-files
+# 4. Add files individually: git add <file>
+# 5. Commit with clear message
+
+# NEVER use git add .         # This is critical!
+```
+
+### Testing Requirements
+
+```bash
+# Python tests (MUST PASS before claiming completion)
+pytest                        # Run all tests
+pytest tests/test_widget_basic.py  # Run specific test
+pytest -v                     # Verbose output
+pytest --cov-report=html     # Generate coverage report
+
+# Frontend tests
+cd frontend
+npm test                      # Run tests
+npm run test:ui              # Interactive UI
+npm run test:coverage        # Coverage report
+```
+
+### Code Quality Tools
+
+```bash
+# Pre-commit hooks (MUST RUN before committing)
+pre-commit install           # One-time setup
+pre-commit run --all-files   # Run all checks
+
+# Individual tools
+ruff format assistant_ui_anywidget tests  # Format Python
+ruff check assistant_ui_anywidget tests   # Lint Python
+mypy assistant_ui_anywidget              # Type check Python
+
+cd frontend
+npm run format               # Format TypeScript
+npm run lint                 # Lint TypeScript
 ```
 
 ## Development
-
-### Frontend Development
 
 ```bash
 cd frontend
@@ -309,6 +510,99 @@ This project includes a comprehensive development setup:
 - **Test coverage**: 75% Python coverage, full frontend test suite
 - **Type safety**: Complete TypeScript and mypy integration
 
+## 📊 Current State & Roadmap
+
+### ✅ Implemented Features
+
+- Multi-provider AI support (OpenAI, Anthropic, Google)
+- Automatic provider detection from environment
+- Jupyter kernel access (read/write variables, execute code)
+- Global agent pattern for notebook safety
+- LangGraph approval workflows
+- Comprehensive test suite (75%+ coverage)
+- Modern React UI with TypeScript
+- Markdown rendering with syntax highlighting
+- Action buttons for interactive operations
+- Conversation logging
+
+### ⏳ In Progress
+
+- Advanced UI components (enhanced Variable Explorer)
+- Streaming AI responses in UI
+- Performance optimizations
+
+### ❌ Future Enhancements (from docs/PLAN.md)
+
+- Vector database for documentation search
+- Advanced debugging features (breakpoints, stack traces)
+- File upload support
+- Rich message formatting
+- Message history persistence
+- Custom themes
+- Export conversations
+- Multiple conversation threads
+
+### Recent Changes
+
+- **2025-07-23**: Major simplification effort reduced codebase by 31%
+  - Consolidated widget classes (removed 422 lines)
+  - Simplified message handling (removed 199 lines)
+  - Streamlined AI service (removed 258 lines)
+  - See `docs/SIMPLIFICATION_PLAN.md` for details
+
+## 🎯 Quick Reference for AI Assistants
+
+### Common Commands
+
+```bash
+# Environment setup
+uv sync --all-extras          # Install dependencies
+source .venv/bin/activate     # Activate environment
+
+# Testing (CRITICAL - must pass!)
+pytest                        # Run all Python tests
+pytest -v                     # Verbose test output
+cd frontend && npm test       # Run frontend tests
+
+# Code quality
+pre-commit run --all-files    # Run all linters/formatters
+
+# Building
+cd frontend && npm run build  # Build frontend bundle
+
+# Development
+cd frontend && npm run dev    # Frontend hot reload
+python take_screenshot.py     # Capture widget screenshot
+```
+
+### Key File Locations
+
+- **Main widget**: `assistant_ui_anywidget/agent_widget.py`
+- **Kernel access**: `assistant_ui_anywidget/kernel_interface.py`
+- **Message handling**: `assistant_ui_anywidget/simple_handlers.py`
+- **AI service**: `assistant_ui_anywidget/ai/langgraph_service.py`
+- **Frontend entry**: `frontend/src/index.tsx`
+- **Tests**: `tests/` directory
+- **Development guide**: `CLAUDE.md`
+
+### Important Rules (from CLAUDE.md)
+
+1. **NEVER** use `git add .` - always add files individually
+2. **NEVER** claim a task is done without running `pytest`
+3. **ALWAYS** run `pre-commit run --all-files` before committing
+4. **DO NOT** add backward compatibility (project has no users yet)
+5. **PREFER** functional style over complex class hierarchies
+6. **AGGRESSIVELY** remove unused code
+
+### Testing a Change
+
+1. Make your changes
+2. Run `pytest` - ALL tests must pass
+3. Run `pre-commit run --all-files` - fix any issues
+4. Test in notebook: `uv run jupyter notebook`
+5. Create example in `examples/` if adding features
+6. Update relevant documentation
+
 ## Architecture
 
 The widget supports:
@@ -318,3 +612,13 @@ The widget supports:
 - **Markdown rendering** with syntax highlighting
 - **Extensible design** for AI agent integration
 - **Modern React patterns** with hooks and TypeScript
+- **Kernel isolation** for security and stability
+
+### Architecture Decision Records
+
+1. **Bundled React (1.4MB)**: Maximum compatibility across Jupyter environments
+2. **Global Agent Pattern**: Prevents multiple instances and keyboard conflicts
+3. **Ctrl+D for Send**: Avoids conflicts with Jupyter's Shift+Enter
+4. **Functional Programming**: Simpler to understand and maintain
+5. **No Backward Compatibility**: Allows rapid improvement and simplification
+6. **LangGraph Optional**: Simple by default, complex workflows when needed
