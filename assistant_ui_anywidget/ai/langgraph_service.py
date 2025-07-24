@@ -27,6 +27,7 @@ from pydantic import BaseModel, ConfigDict, Field
 from ..kernel_interface import KernelContext, KernelInterface
 from ..kernel_tools import create_kernel_tools
 from .logger import ConversationLogger
+from .prompt_config import SystemPromptConfig
 
 # Load environment variables
 load_dotenv()
@@ -106,7 +107,7 @@ def init_llm(
     providers = [
         ("openai", "gpt-4o-mini", "OPENAI_API_KEY"),
         ("anthropic", "claude-3-haiku-20240307", "ANTHROPIC_API_KEY"),
-        ("google_genai", "gemini-1.5-flash", "GOOGLE_API_KEY"),
+        ("google_genai", "gemini-2.5-flash", "GOOGLE_API_KEY"),
     ]
 
     for prov, default_model, env_var in providers:
@@ -225,22 +226,38 @@ def build_context_message(context: KernelContext) -> str:
     return "\n".join(parts) if parts else "Kernel context available."
 
 
+# Cache the system prompt config to avoid reloading the YAML file
+_system_prompt_config: Optional[SystemPromptConfig] = None
+
+
+def get_system_prompt_config() -> SystemPromptConfig:
+    """Load and cache the system prompt configuration."""
+    global _system_prompt_config
+
+    if _system_prompt_config is None:
+        prompt_path = Path(__file__).parent / "system_prompt.yaml"
+        with open(prompt_path, "r") as f:
+            prompt_data = yaml.safe_load(f)
+
+        # Create and validate the config using Pydantic
+        _system_prompt_config = SystemPromptConfig(**prompt_data)
+
+        # Log which fields were loaded
+        logger.info(
+            f"Loaded system prompt config with fields: {list(prompt_data.keys())}"
+        )
+
+    return _system_prompt_config
+
+
 def get_system_prompt(require_approval: bool = True) -> str:
-    """Get the detailed system prompt for the AI assistant by reading from a YAML file."""
-    prompt_path = Path(__file__).parent / "system_prompt.yaml"
-    with open(prompt_path, "r") as f:
-        prompt_data = yaml.safe_load(f)
+    """Get the detailed system prompt for the AI assistant.
 
-    main_prompt = prompt_data["main_prompt"]
-    slash_commands = prompt_data["slash_commands"]
-    approval_note = prompt_data["approval_note"] if require_approval else ""
-
-    # Combine the parts into the final prompt
-    full_prompt = f"{main_prompt}\n\n{slash_commands}"
-    if approval_note:
-        full_prompt += f"\n\n{approval_note}"
-
-    return full_prompt
+    This uses a Pydantic model to ensure all fields are properly loaded
+    and validated from the YAML file.
+    """
+    config = get_system_prompt_config()
+    return config.get_full_prompt(require_approval=require_approval)
 
 
 def create_call_model(
@@ -256,7 +273,10 @@ def create_call_model(
         if not messages or not isinstance(messages[0], SystemMessage):
             system_msg = SystemMessage(content=get_system_prompt(require_approval))
             messages = [system_msg] + messages
-
+        print(f"Messages: {messages}")
+        Path(__file__).parent.joinpath("messages.log").write_text(
+            "\n".join(str(msg) for msg in messages)
+        )
         response = llm.bind_tools(tools).invoke(messages)
         return {"messages": [response]}
 
@@ -372,10 +392,19 @@ class LangGraphAIService:
             else:
                 # Normal message
                 messages = []
+                # Always add our custom system prompt first
+                system_prompt = get_system_prompt(self.require_approval)
+
+                # If we have context, append it to the system prompt
                 if context:
-                    messages.append(
-                        SystemMessage(content=build_context_message(context))
+                    context_msg = build_context_message(context)
+                    full_system_content = (
+                        f"{system_prompt}\n\n**CURRENT KERNEL STATE:**\n{context_msg}"
                     )
+                else:
+                    full_system_content = system_prompt
+
+                messages.append(SystemMessage(content=full_system_content))
                 messages.append(HumanMessage(content=message))
 
                 # Create AgentState payload with additional context
