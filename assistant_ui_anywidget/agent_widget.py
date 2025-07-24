@@ -6,9 +6,9 @@ from typing import Any, Dict, List, Optional
 import anywidget
 import traitlets
 
-from .kernel_interface import KernelInterface, KernelContext, AIConfig, ExecutionResult
-from .simple_handlers import SimpleHandlers
 from .ai import LangGraphAIService
+from .kernel_interface import AIConfig, ExecutionResult, KernelContext, KernelInterface
+from .simple_handlers import SimpleHandlers
 
 
 class AgentWidget(anywidget.AnyWidget):
@@ -45,7 +45,10 @@ class AgentWidget(anywidget.AnyWidget):
     ).tag(sync=True)
 
     def __init__(
-        self, ai_config: Optional[Dict[str, Any] | AIConfig] = None, **kwargs: Any
+        self,
+        ai_config: Optional[Dict[str, Any] | AIConfig] = None,
+        show_help: bool = False,
+        **kwargs: Any,
     ) -> None:
         """Initialize the widget."""
         super().__init__(**kwargs)
@@ -97,6 +100,18 @@ class AgentWidget(anywidget.AnyWidget):
         # Initialize kernel state
         self._update_kernel_state()
         self._update_variables_info()
+        if show_help:
+            self.add_message(
+                "assistant",
+                "👋 Welcome! I'm your AI assistant with kernel access.\n\n"
+                "💡 **Tip**: Use **Ctrl+D** to send messages (not Shift+Enter) to avoid "
+                "accidentally executing notebook cells.\n\n"
+                "Try asking me things like:\n"
+                '• "Show me all my variables"\n'
+                '• "What\'s in my DataFrame?"\n'
+                '• "Help me debug this error"\n\n'
+                "You can also use slash commands like `/vars`, `/help`, or `/exec <code>`.",
+            )
 
     def _handle_message(
         self, widget: Any, content: Dict[str, Any], buffers: Any = None
