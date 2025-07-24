@@ -7,7 +7,6 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Annotated, Any, Dict, List, Optional
 
-import yaml
 from dotenv import load_dotenv
 from langchain.chat_models import init_chat_model
 from langchain_core.language_models import BaseChatModel
@@ -235,17 +234,7 @@ def get_system_prompt_config() -> SystemPromptConfig:
     global _system_prompt_config
 
     if _system_prompt_config is None:
-        prompt_path = Path(__file__).parent / "system_prompt.yaml"
-        with open(prompt_path, "r") as f:
-            prompt_data = yaml.safe_load(f)
-
-        # Create and validate the config using Pydantic
-        _system_prompt_config = SystemPromptConfig(**prompt_data)
-
-        # Log which fields were loaded
-        logger.info(
-            f"Loaded system prompt config with fields: {list(prompt_data.keys())}"
-        )
+        _system_prompt_config = SystemPromptConfig()
 
     return _system_prompt_config
 
