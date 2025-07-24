@@ -187,7 +187,7 @@ def get_agent_info() -> Dict[str, Any]:
             "chat_history_length": len(_global_agent.chat_history),
             "namespace_size": _global_agent.kernel_state.get("namespace_size", 0),
             "log_path": str(_global_agent.get_conversation_log_path())
-            if hasattr(_global_agent, "get_conversation_log_path")
+            if _global_agent.get_conversation_log_path()
             else None,
         }
     except Exception:

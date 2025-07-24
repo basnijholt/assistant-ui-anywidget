@@ -48,6 +48,9 @@ class AgentWidget(anywidget.AnyWidget):
         self.kernel = KernelInterface()
         self.handlers = SimpleHandlers(self.kernel)
 
+        # Initialize thread ID
+        self._thread_id: Optional[str] = None
+
         # Initialize AI service only if AI config is provided
         self.ai_service: Optional[LangGraphAIService] = None
         if ai_config:
@@ -143,7 +146,7 @@ class AgentWidget(anywidget.AnyWidget):
                 )
 
                 # Handle approval requests
-                if hasattr(result, "needs_approval") and result.needs_approval:
+                if result.needs_approval:
                     # Show approval request
                     interrupt_msg = getattr(
                         result, "interrupt_message", "Approval required"
@@ -467,7 +470,7 @@ for var in list(globals().keys()):
 
     def _get_thread_id(self) -> str:
         """Get or create a thread ID for the current conversation."""
-        if not hasattr(self, "_thread_id"):
+        if self._thread_id is None:
             import uuid
 
             self._thread_id = str(uuid.uuid4())
@@ -538,7 +541,7 @@ for var in list(globals().keys()):
 
     def get_conversation_log_path(self) -> Optional[str]:
         """Get the current conversation log file path."""
-        if self.ai_service and hasattr(self.ai_service, "conversation_logger"):
+        if self.ai_service:
             log_path = self.ai_service.conversation_logger.get_current_log_path()
             return str(log_path) if log_path else None
         return None
