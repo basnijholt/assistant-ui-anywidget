@@ -4,7 +4,6 @@ import logging
 import os
 import uuid
 from dataclasses import dataclass
-from pathlib import Path
 from typing import Annotated, Any, Dict, List, Optional
 
 from dotenv import load_dotenv
@@ -222,6 +221,12 @@ def build_context_message(context: KernelContext) -> str:
         error = context.last_error
         parts.append(f"Recent error: {error.get('message', 'Unknown error')}")
 
+    # Add imported modules information
+    if context.imported_modules:
+        parts.append("\nIMPORTED MODULES:")
+        for alias, module_info in context.imported_modules.items():
+            parts.append(f"  - {alias}: {module_info}")
+
     return "\n".join(parts) if parts else "Kernel context available."
 
 
@@ -262,10 +267,6 @@ def create_call_model(
         if not messages or not isinstance(messages[0], SystemMessage):
             system_msg = SystemMessage(content=get_system_prompt(require_approval))
             messages = [system_msg] + messages
-        print(f"Messages: {messages}")
-        Path(__file__).parent.joinpath("messages.log").write_text(
-            "\n".join(str(msg) for msg in messages)
-        )
         response = llm.bind_tools(tools).invoke(messages)
         return {"messages": [response]}
 

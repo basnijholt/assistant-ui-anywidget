@@ -137,6 +137,7 @@ class KernelContext:
     recent_cells: Optional[List[Dict[str, Any]]] = None
     notebook_summary: Optional[Dict[str, Any]] = None
     last_error: Optional[Dict[str, Any]] = None
+    imported_modules: Optional[Dict[str, str]] = None
 
     def to_dict(self) -> dict:
         """Convert to dictionary for serialization."""
@@ -146,6 +147,7 @@ class KernelContext:
             "recent_cells": self.recent_cells,
             "notebook_summary": self.notebook_summary,
             "last_error": self.last_error,
+            "imported_modules": self.imported_modules,
         }
 
 
@@ -485,6 +487,37 @@ class KernelInterface:
             "execution_count": self.shell.execution_count if self.shell else 0,
             "namespace_size": len(self.get_namespace()),
         }
+
+    def get_imported_modules(self) -> Dict[str, str]:
+        """Get modules that have been imported in the namespace.
+
+        Returns dict mapping module names to their type (e.g., 'numpy' -> 'external', 'mymodule' -> 'user')
+        """
+        if not self.is_available or not self.shell:
+            return {}
+
+        imported_modules = {}
+        namespace = self.get_namespace()
+
+        # Check namespace for module objects
+        for name, value in namespace.items():
+            if isinstance(value, type(sys)):  # Check if it's a module
+                module_type = "user"  # default
+                if hasattr(value, "__file__") and value.__file__:
+                    path = str(value.__file__)
+                    if "site-packages" in path or "dist-packages" in path:
+                        module_type = "external"
+                    elif any(p in path for p in ["lib/python", "Python.framework"]):
+                        module_type = "stdlib"
+                else:
+                    # Built-in module
+                    module_type = "builtin"
+
+                # Store the actual module name from the module object
+                actual_name = getattr(value, "__name__", name)
+                imported_modules[name] = f"{actual_name} ({module_type})"
+
+        return imported_modules
 
     def interrupt_execution(self) -> bool:
         """Interrupt current execution."""

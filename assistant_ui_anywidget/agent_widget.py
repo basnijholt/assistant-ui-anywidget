@@ -531,12 +531,16 @@ for var in list(globals().keys()):
         # Add last error if any
         last_error = self.kernel.get_last_error()
 
+        # Add imported modules
+        imported_modules = self.kernel.get_imported_modules()
+
         return KernelContext(
             kernel_info=kernel_info,
             variables=variables,
             recent_cells=recent_cells,
             notebook_summary=notebook_summary,
             last_error=last_error,
+            imported_modules=imported_modules,
         )
 
     def get_conversation_log_path(self) -> Optional[str]:
