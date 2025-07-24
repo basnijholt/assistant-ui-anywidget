@@ -152,7 +152,7 @@ class AgentWidget(anywidget.AnyWidget):
                     current_history = list(self.chat_history)
                     current_history.append(
                         {
-                            "role": "system",
+                            "role": "assistant",
                             "content": f"🔐 **Approval Required**\n\n{interrupt_msg}",
                             "needs_approval": True,
                             "thread_id": result.thread_id,
