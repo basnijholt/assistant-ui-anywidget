@@ -1,10 +1,10 @@
 """Test that imported modules are included in kernel context."""
 
-from unittest.mock import MagicMock
 import sys
+from unittest.mock import MagicMock
 
-from assistant_ui_anywidget.kernel_interface import KernelInterface
 from assistant_ui_anywidget.agent_widget import AgentWidget
+from assistant_ui_anywidget.kernel_interface import KernelInterface
 
 
 class TestImportedModulesContext:
@@ -60,7 +60,7 @@ class TestImportedModulesContext:
     def test_kernel_context_includes_modules(self) -> None:
         """Test that KernelContext includes imported modules."""
         # Create widget
-        widget = AgentWidget()
+        widget = AgentWidget(show_help=False)
 
         # Replace kernel with a mock
         mock_kernel = MagicMock(spec=KernelInterface)

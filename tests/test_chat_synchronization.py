@@ -4,12 +4,7 @@ These tests verify that the bidirectional synchronization works correctly
 for all common use cases.
 """
 
-import os
 import sys
-
-# Add the python module to the path
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "python"))  # noqa: PTH118, PTH120
-
 from typing import Any
 
 from assistant_ui_anywidget.agent_widget import AgentWidget

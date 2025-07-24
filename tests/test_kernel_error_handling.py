@@ -1,7 +1,8 @@
 """Test kernel error handling, especially get_last_error edge cases."""
 
 from unittest.mock import Mock
-from assistant_ui_anywidget.kernel_interface import KernelInterface, KernelContext
+
+from assistant_ui_anywidget.kernel_interface import KernelContext, KernelInterface
 
 
 def test_get_last_error_no_exception() -> None:
@@ -69,7 +70,7 @@ def test_agent_widget_context_no_kernel() -> None:
     """Test that _get_kernel_context handles missing kernel gracefully."""
     from assistant_ui_anywidget import AgentWidget
 
-    widget = AgentWidget()
+    widget = AgentWidget(show_help=False)
 
     # Should not raise even when kernel operations fail
     context = widget._get_kernel_context()

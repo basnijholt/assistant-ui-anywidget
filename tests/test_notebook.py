@@ -11,7 +11,7 @@ from assistant_ui_anywidget.agent_widget import AgentWidget
 def test_widget_in_notebook() -> AgentWidget | None:
     """Test widget creation and display."""
     print("Creating AgentWidget...")
-    widget = AgentWidget()
+    widget = AgentWidget(show_help=False)
 
     print("Widget created successfully!")
     print(f"Widget ID: {widget.model_id}")
@@ -32,7 +32,7 @@ if __name__ == "__main__":
     print("1. Start Jupyter: uv run jupyter notebook")
     print("2. Create new notebook")
     print("3. Run: from python.agent_widget import AgentWidget")
-    print("4. Run: widget = AgentWidget()")
+    print("4. Run: widget = AgentWidget(show_help=False)")
     print("5. Run: widget")
 
     # For testing, we can also create a simple notebook file
@@ -57,7 +57,7 @@ if __name__ == "__main__":
    "metadata": {},
    "outputs": [],
    "source": [
-    "widget = AgentWidget()\\n",
+    "widget = AgentWidget(show_help=False)\\n",
     "widget"
    ]
   }

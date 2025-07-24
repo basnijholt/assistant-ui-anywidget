@@ -4,6 +4,7 @@ import pathlib
 from collections.abc import Callable
 
 import pytest
+
 from assistant_ui_anywidget.agent_widget import AgentWidget
 
 # Type alias for the UI message factory
@@ -27,8 +28,8 @@ class TestWidgetBasics:
     def test_esm_content_loaded(self, widget: AgentWidget) -> None:
         """Test that the ESM bundle content is loaded."""
         # AnyWidget loads the file content, not the path
-        assert isinstance(widget._esm, str), "ESM should be a string"
-        assert len(widget._esm) > 0, "ESM content should not be empty"
+        assert isinstance(widget._esm, str), "ESM should be a string"  # type: ignore[unreachable]
+        assert len(widget._esm) > 0, "ESM content should not be empty"  # type: ignore[unreachable]
         # Check for React content (indicating the bundle is loaded)
         assert "react" in widget._esm.lower(), "ESM should contain React code"
 
@@ -36,7 +37,10 @@ class TestWidgetBasics:
         """Test that the original ESM bundle file exists."""
         # The original path before AnyWidget loads it
         expected_path = (
-            pathlib.Path(__file__).parent.parent / "frontend" / "dist" / "index.js"
+            pathlib.Path(__file__).parent.parent
+            / "assistant_ui_anywidget"
+            / "static"
+            / "index.js"
         )
         assert expected_path.exists(), f"ESM bundle file not found at {expected_path}"
         assert expected_path.is_file(), (

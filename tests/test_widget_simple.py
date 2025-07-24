@@ -14,17 +14,17 @@ def test_widget() -> None:
 
     # Test widget creation
     print("1. Creating widget...")
-    widget = AgentWidget()
+    widget = AgentWidget(show_help=False)
     print(f"   ✓ Widget created: {widget.__class__.__name__}")
     print(f"   ✓ Widget ID: {widget.model_id}")
 
     # Test JavaScript bundle
     print("\n2. Checking JavaScript bundle...")
     if hasattr(widget, "_esm"):
-        if isinstance(widget._esm, str) and widget._esm.startswith("var"):
-            print("   ✓ JavaScript is bundled (no external imports)")
+        if isinstance(widget._esm, str) and widget._esm.startswith("var"):  # type: ignore[unreachable]
+            print("   ✓ JavaScript is bundled (no external imports)")  # type: ignore[unreachable]
         else:
-            print(f"   ✗ Unexpected ESM content: {widget._esm[:50]}...")
+            print(f"   ✗ Unexpected ESM content: {widget._esm[:50]}...")  # type: ignore[unused-ignore,index]
     else:
         print("   ✗ No _esm attribute found")
 
@@ -45,7 +45,7 @@ def test_widget() -> None:
     print("   import sys")
     print("   sys.path.insert(0, 'python')")
     print("   from assistant_ui_anywidget.agent_widget import AgentWidget")
-    print("   widget = AgentWidget()")
+    print("   widget = AgentWidget(show_help=False)")
     print("   widget")
 
 
