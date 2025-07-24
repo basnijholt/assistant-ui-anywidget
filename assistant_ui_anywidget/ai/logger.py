@@ -3,7 +3,10 @@
 import json
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from ..kernel_interface import KernelContext
 
 
 class ConversationLogger:
@@ -44,7 +47,7 @@ class ConversationLogger:
         user_message: str,
         ai_response: str,
         tool_calls: Optional[List[Dict[str, Any]]] = None,
-        context: Optional[Dict[str, Any]] = None,
+        context: Optional["KernelContext"] = None,
         error: Optional[str] = None,
     ) -> None:
         """Log a single conversation exchange.
@@ -54,7 +57,7 @@ class ConversationLogger:
             user_message: The user's input
             ai_response: The AI's response
             tool_calls: Any tool calls made during the conversation
-            context: Additional context (kernel state, etc.)
+            context: Kernel context object (will be converted to dict)
             error: Any error that occurred
         """
         if not self.current_log_file:
@@ -74,7 +77,7 @@ class ConversationLogger:
             "user_message": user_message,
             "ai_response": ai_response,
             "tool_calls": tool_calls or [],
-            "context": context or {},
+            "context": context.to_dict() if context else {},
             "error": error,
         }
 

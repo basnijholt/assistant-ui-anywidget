@@ -19,7 +19,7 @@ from langgraph.checkpoint.memory import MemorySaver
 from langgraph.graph import END, StateGraph
 from langgraph.graph.message import add_messages
 from langgraph.prebuilt import ToolNode
-from langgraph.types import interrupt
+from langgraph.types import Command, interrupt
 from pydantic import BaseModel, ConfigDict, Field
 
 from ..kernel_interface import KernelContext, KernelInterface
@@ -31,6 +31,10 @@ from .prompt_config import SystemPromptConfig
 load_dotenv()
 
 logger = logging.getLogger(__name__)
+
+# Constants for approval decisions
+APPROVED = "approved"
+DENIED = "denied"
 
 
 class AgentState(BaseModel):
@@ -185,7 +189,7 @@ def approval_node(state: AgentState) -> Dict[str, Any]:
     # Interrupt for approval
     decision = interrupt({"message": approval_msg, "code_blocks": code_blocks})
 
-    if decision != "approved":
+    if decision != APPROVED:
         # User denied - return message and mark as denied
         denial_msg = HumanMessage(content="Code execution denied by user.")
         return {
@@ -247,27 +251,25 @@ def build_context_message(context: KernelContext) -> str:
     return "\n".join(parts) if parts else "Kernel context available."
 
 
-# Cache the system prompt config to avoid reloading the YAML file
-_system_prompt_config: Optional[SystemPromptConfig] = None
-
-
-def get_system_prompt_config() -> SystemPromptConfig:
-    """Load and cache the system prompt configuration."""
-    global _system_prompt_config
-
-    if _system_prompt_config is None:
-        _system_prompt_config = SystemPromptConfig()
-
-    return _system_prompt_config
+def extract_tool_calls_from_message(
+    message: AnyMessage,
+) -> Optional[List[Dict[str, Any]]]:
+    """Extract tool calls from a message, returning None if no tool calls."""
+    if isinstance(message, AIMessage) and message.tool_calls:
+        return [
+            {"name": tc.get("name"), "args": tc.get("args")}
+            for tc in message.tool_calls
+        ]
+    return None
 
 
 def get_system_prompt(require_approval: bool = True) -> str:
     """Get the detailed system prompt for the AI assistant.
 
     This uses a Pydantic model to ensure all fields are properly loaded
-    and validated from the YAML file.
+    and validated from the YAML file. Reloads configuration each time.
     """
-    config = get_system_prompt_config()
+    config = SystemPromptConfig()
     return config.get_full_prompt(require_approval=require_approval)
 
 
@@ -278,7 +280,8 @@ def create_call_model(
 
     def call_model(state: AgentState) -> Dict[str, Any]:
         """Call the LLM with tools (synchronous version)."""
-        messages = state.messages
+        # Create a copy to avoid mutating the original state
+        messages = list(state.messages)
 
         # Add system message if not present
         if not messages or not isinstance(messages[0], SystemMessage):
@@ -316,29 +319,19 @@ def create_agent_graph(
         graph.add_conditional_edges(
             "agent",
             should_require_approval,
-            {
-                "tools": "tools",
-                "approval": "approval",
-                END: END,
-            },
+            {"tools": "tools", "approval": "approval", END: END},
         )
         graph.add_conditional_edges(
             "approval",
             route_after_approval,
-            {
-                "tools": "tools",
-                "agent": "agent",
-            },
+            {"tools": "tools", "agent": "agent"},
         )
     else:
         # Direct routing without approval
         graph.add_conditional_edges(
             "agent",
             should_continue,
-            {
-                "tools": "tools",
-                END: END,
-            },
+            {"tools": "tools", END: END},
         )
 
     graph.add_edge("tools", "agent")
@@ -390,19 +383,13 @@ class LangGraphAIService:
             # Build the payload
             if isinstance(message, bool):
                 # Approval decision
-                from langgraph.types import Command
-
-                payload = Command(resume="approved" if message else "denied")
+                payload = Command(resume=APPROVED if message else DENIED)
             elif message == "Approve":
                 # Button approval
-                from langgraph.types import Command
-
-                payload = Command(resume="approved")
+                payload = Command(resume=APPROVED)
             elif message == "Deny":
                 # Button denial
-                from langgraph.types import Command
-
-                payload = Command(resume="denied")
+                payload = Command(resume=DENIED)
             else:
                 # Normal message
                 messages = []
@@ -442,7 +429,7 @@ class LangGraphAIService:
                     thread_id=thread_id,
                     user_message=str(message),
                     ai_response="[Awaiting approval]",
-                    context=context.to_dict() if context else None,
+                    context=context,
                 )
 
                 return ChatResult(
@@ -464,7 +451,6 @@ class LangGraphAIService:
 
             last_message: AnyMessage = messages[-1]
             content = "No content"
-            tool_calls: List[Dict[str, Any]] = []
 
             if isinstance(last_message, AIMessage):
                 # Handle cases where content might be a list
@@ -472,11 +458,6 @@ class LangGraphAIService:
                     content = "\n".join(str(item) for item in last_message.content)
                 else:
                     content = str(last_message.content or "")
-                if last_message.tool_calls:
-                    tool_calls = [
-                        {"name": tc.get("name"), "args": tc.get("args")}
-                        for tc in last_message.tool_calls
-                    ]
             elif isinstance(last_message, HumanMessage):
                 content = str(last_message.content)
 
@@ -485,8 +466,8 @@ class LangGraphAIService:
                 thread_id=thread_id,
                 user_message=str(message),
                 ai_response=content,
-                tool_calls=tool_calls if tool_calls else None,
-                context=context.to_dict() if context else None,
+                tool_calls=extract_tool_calls_from_message(last_message),
+                context=context,
             )
 
             return ChatResult(
@@ -503,7 +484,7 @@ class LangGraphAIService:
                 thread_id=thread_id,
                 user_message=str(message),
                 ai_response=error_msg,
-                context=context.to_dict() if context else None,
+                context=context,
                 error=str(e),
             )
 
