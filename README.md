@@ -132,13 +132,11 @@ This section provides comprehensive context for AI assistants (like Claude) work
 
 - **What**: An AI-powered chat widget for Jupyter notebooks with direct kernel access
 - **Why**: Enables natural language interaction with notebook variables, code execution, and debugging
-- **Core Innovation**: Prevents keyboard conflicts by using Ctrl+D instead of Shift+Enter for sending messages
 
 ### Current State
 
 - **Maturity**: Production-ready with 75%+ test coverage
 - **Architecture**: Functional programming style, minimal class hierarchies, aggressive code removal
-- **Recent Work**: Major simplification effort reduced codebase by 31%
 
 ### Key Technical Decisions
 
@@ -190,22 +188,22 @@ assistant-ui-anywidget/
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│                    Jupyter Notebook                          │
+│                    Jupyter Notebook                         │
 ├─────────────────────────────────────────────────────────────┤
-│                                                              │
-│  ┌────────────────┐         ┌─────────────────────────┐    │
-│  │ Python Kernel  │◄────────┤    AgentWidget          │    │
-│  │                │         │                         │    │
-│  │ - Variables    │         │ - Message Handler      │    │
-│  │ - Execution    │         │ - AI Service           │    │
-│  │ - State        │         │ - Kernel Interface     │    │
-│  └────────────────┘         └───────────┬─────────────┘    │
-│                                         │                    │
+│                                                             │
+│  ┌────────────────┐         ┌─────────────────────────┐     │
+│  │ Python Kernel  │◄────────┤    AgentWidget          │     │
+│  │                │         │                         │     │
+│  │ - Variables    │         │ - Message Handler       │     │
+│  │ - Execution    │         │ - AI Service            │     │
+│  │ - State        │         │ - Kernel Interface      │     │
+│  └────────────────┘         └───────────┬─────────────┘     │
+│                                         │                   │
 │                                         │ anywidget         │
-│                                         ▼                    │
-│  ┌─────────────────────────────────────────────────┐    │
-│  │           React Frontend (TypeScript)                │    │
-│  │                                                      │    │
+│                                         ▼                   │
+│  ┌─────────────────────────────────────────────────────┐    │
+│  │           React Frontend (TypeScript)               │    │
+│  │                                                     │    │
 │  │  - Chat UI with Markdown rendering                  │    │
 │  │  - Variable Explorer for kernel inspection          │    │
 │  │  - Action buttons for quick commands                │    │
@@ -253,7 +251,7 @@ model.send({
 
 ```bash
 # Clone and setup
-git clone <repo>
+git clone git@github.com:basnijholt/assistant-ui-anywidget.git
 cd assistant-ui-anywidget
 uv sync                       # Install all dependencies
 source .venv/bin/activate     # Activate virtual environment
@@ -276,7 +274,7 @@ uv add <package>              # Runtime dependency
 uv add --dev <package>        # Development dependency
 
 # Testing (MUST PASS before claiming completion)
-pytest                        # Run all Python tests (129 tests, 75%+ coverage)
+pytest                        # Run all Python tests (159 tests, 70%+ coverage)
 pytest -v                     # Verbose output
 cd frontend && npm test       # Frontend tests (Vitest)
 
@@ -308,7 +306,7 @@ git diff origin/main | cat    # Note: pipe to cat
 
 ### Testing Requirements
 
-- **Python**: 129 tests with 75%+ coverage
+- **Python**: 159 tests with 70%+ coverage
 - **Frontend**: Vitest with React Testing Library
 - **All tests must pass** before any commit
 - Run `pytest` for Python tests
@@ -351,29 +349,19 @@ git diff origin/main | cat    # Note: pipe to cat
 - Jupyter kernel access (read/write variables, execute code)
 - Global agent pattern for notebook safety
 - LangGraph approval workflows
-- Comprehensive test suite (129 tests, 75%+ coverage)
+- Comprehensive test suite (159 tests, 70%+ coverage)
 - Modern React UI with TypeScript
 - Markdown rendering with syntax highlighting
 - Action buttons for interactive operations
 - Conversation logging
-- CI/CD with GitHub Actions (Python 3.10-3.12)
+- CI/CD with GitHub Actions (Python 3.10-3.13)
 - Full type safety (mypy + TypeScript)
-
-⏳ **In Progress**
-
-- Advanced UI components (enhanced Variable Explorer)
-- Streaming AI responses in UI
-- Performance optimizations
 
 ❌ **Future Enhancements**
 
-- Vector database for documentation search
-- Advanced debugging features (breakpoints, stack traces)
-- File upload support
-- Rich message formatting
-- Message history persistence
+- Vector database for documentation search (see [docs/VECTOR_DB_INTEGRATION.md](docs/VECTOR_DB_INTEGRATION.md))
+- Message history persistence (currently only in-memory during session)
 - Custom themes
 - Export conversations
-- Multiple conversation threads
 
 </details>
