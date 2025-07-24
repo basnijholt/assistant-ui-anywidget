@@ -59,6 +59,10 @@ class AgentState(BaseModel):
     pending_approval: bool = Field(
         default=False, description="Whether code execution is pending approval"
     )
+    approval_granted: Optional[bool] = Field(
+        default=None,
+        description="Whether approval was granted (None=not decided, True=approved, False=denied)",
+    )
 
     # Error tracking
     last_error: Optional[str] = Field(
@@ -182,12 +186,25 @@ def approval_node(state: AgentState) -> Dict[str, Any]:
     decision = interrupt({"message": approval_msg, "code_blocks": code_blocks})
 
     if decision != "approved":
-        # User denied - return message
+        # User denied - return message and mark as denied
         denial_msg = HumanMessage(content="Code execution denied by user.")
-        return {"messages": [denial_msg], "pending_approval": False}
+        return {
+            "messages": [denial_msg],
+            "pending_approval": False,
+            "approval_granted": False,
+        }
 
     # Approved - continue to tools
-    return {"pending_approval": False}
+    return {"pending_approval": False, "approval_granted": True}
+
+
+def route_after_approval(state: AgentState) -> str:
+    """Route after approval - go to tools if approved, back to agent if denied."""
+    if state.approval_granted is True:
+        return "tools"
+    else:
+        # If approval was denied or not set, return to agent to continue conversation
+        return "agent"
 
 
 def build_context_message(context: KernelContext) -> str:
@@ -305,7 +322,14 @@ def create_agent_graph(
                 END: END,
             },
         )
-        graph.add_edge("approval", "tools")
+        graph.add_conditional_edges(
+            "approval",
+            route_after_approval,
+            {
+                "tools": "tools",
+                "agent": "agent",
+            },
+        )
     else:
         # Direct routing without approval
         graph.add_conditional_edges(
