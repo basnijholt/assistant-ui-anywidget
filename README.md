@@ -4,7 +4,9 @@
 [![MIT License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![Tests](https://github.com/basnijholt/assistant-ui-anywidget/workflows/CI/badge.svg)](https://github.com/basnijholt/assistant-ui-anywidget/actions)
 
-An AI-powered chat widget for Jupyter notebooks that can directly access and manipulate your kernel variables, execute code, and help with debugging.
+A truly cross-platform AI assistant for Jupyter notebooks that works seamlessly in **JupyterLab**, **Jupyter Notebook**, **VS Code**, **Google Colab**, and any environment supporting IPyWidgets.
+
+Unlike traditional notebook extensions that are tied to specific platforms, Assistant-UI leverages the AnyWidget framework to provide a consistent, modern chat interface with deep kernel integration everywhere you work. No browser extensions, no IDE-specific code—just a clean, powerful AI assistant that follows you across environments.
 
 ## Features
 
@@ -23,6 +25,32 @@ An AI-powered chat widget for Jupyter notebooks that can directly access and man
 - **Markdown rendering**: Beautiful formatting with syntax highlighting
 - **Action buttons**: Interactive buttons for common operations
 - **Approval workflows**: Optional LangGraph integration for code execution approval
+
+## Why Assistant-UI AnyWidget?
+
+### Comparison with Other AI Notebook Assistants
+
+| Feature                       | Assistant-UI AnyWidget | Jupyter AI    | GitHub Copilot Chat | IPython-GPT    |
+| ----------------------------- | ---------------------- | ------------- | ------------------- | -------------- |
+| **Works in JupyterLab**       | ✅ Full UI             | ✅ Full UI    | ❌                  | ✅ Text only   |
+| **Works in VS Code**          | ✅ Full UI             | ⚠️ Magic only | ✅                  | ✅ Text only   |
+| **Works in Classic Notebook** | ✅ Full UI             | ✅ Full UI    | ❌                  | ✅ Text only   |
+| **No browser extension**      | ✅                     | ✅            | ✅                  | ✅             |
+| **Rich widget UI**            | ✅                     | ✅            | ✅                  | ❌             |
+| **Approval workflows**        | ✅ LangGraph           | ❌            | ⚠️ Limited          | ❌             |
+| **Multi-provider AI**         | ✅ Auto-detect         | ✅ Configure  | ❌ GitHub only      | ❌ OpenAI only |
+| **Global agent pattern**      | ✅                     | ❌            | N/A                 | ❌             |
+| **Open source**               | ✅                     | ✅            | ✅ Recently         | ✅             |
+
+### Key Advantages
+
+🎯 **True Cross-Platform**: Unlike browser extensions or IDE-specific integrations, our AnyWidget-based approach works consistently everywhere.
+
+🔧 **Clean Architecture**: Functional programming style with modern TypeScript/React frontend, making it easy to understand and extend.
+
+🛡️ **Approval Workflows**: Built-in LangGraph integration for reviewing AI-suggested code before execution—perfect for production environments.
+
+🌐 **Provider Flexibility**: Automatically detects and uses any available AI provider (OpenAI → Anthropic → Google), with fallback to mock AI for development.
 
 ## Installation
 
