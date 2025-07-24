@@ -1,8 +1,14 @@
 """System prompt configuration using pydantic-settings."""
 
 from pathlib import Path
+from typing import Tuple, Type
 
-from pydantic_settings import BaseSettings, SettingsConfigDict
+from pydantic import ConfigDict
+from pydantic_settings import (
+    BaseSettings,
+    PydanticBaseSettingsSource,
+    YamlConfigSettingsSource,
+)
 
 
 class SystemPromptConfig(BaseSettings):
@@ -30,7 +36,22 @@ class SystemPromptConfig(BaseSettings):
         )
         return "\n\n".join(prompt_parts)
 
-    model_config = SettingsConfigDict(
-        yaml_file=Path(__file__).parent / "system_prompt.yaml",
-        extra="forbid",
-    )
+    model_config = ConfigDict(extra="forbid")
+
+    @classmethod
+    def settings_customise_sources(
+        cls,
+        settings_cls: Type[BaseSettings],
+        init_settings: PydanticBaseSettingsSource,
+        env_settings: PydanticBaseSettingsSource,
+        dotenv_settings: PydanticBaseSettingsSource,
+        file_secret_settings: PydanticBaseSettingsSource,
+    ) -> Tuple[PydanticBaseSettingsSource, ...]:
+        """Configure pydantic-settings to load from YAML file."""
+        yaml_file = Path(__file__).parent / "system_prompt.yaml"
+        return (
+            init_settings,
+            YamlConfigSettingsSource(settings_cls, yaml_file=yaml_file),
+            env_settings,
+            file_secret_settings,
+        )
