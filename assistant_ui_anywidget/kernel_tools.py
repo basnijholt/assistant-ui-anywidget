@@ -4,6 +4,7 @@ import os
 import subprocess
 from typing import Any, Dict, List, Optional, Type
 from langchain_core.tools import BaseTool
+from langchain_community.agent_toolkits import FileManagementToolkit
 from pydantic import BaseModel, Field
 
 from .kernel_interface import KernelInterface
@@ -903,9 +904,36 @@ class ListUserModulesTool(BaseTool):
         return "\n".join(lines)
 
 
+def get_file_management_tools(working_directory: str = ".") -> List[BaseTool]:
+    """Get file management tools with proper approval configuration.
+
+    Returns tools for file operations with the following approval requirements:
+    - Read operations (read_file, list_directory, file_search): No approval needed
+    - Destructive operations (write_file, file_delete, move_file, copy_file): Require approval
+    """
+    toolkit = FileManagementToolkit(root_dir=working_directory)
+    tools: List[BaseTool] = toolkit.get_tools()
+
+    # Configure which tools require approval
+    approval_required = {"write_file", "file_delete", "move_file", "copy_file"}
+    no_approval = {"read_file", "list_directory", "file_search"}
+
+    # Set metadata for approval requirements
+    for tool in tools:
+        if tool.name in approval_required:
+            tool.metadata = {"requires_approval": True}
+        elif tool.name in no_approval:
+            tool.metadata = {"requires_approval": False}
+        else:
+            # Default to requiring approval for unknown tools
+            tool.metadata = {"requires_approval": True}
+
+    return tools
+
+
 def create_kernel_tools(kernel: KernelInterface) -> List[BaseTool]:
     """Create all kernel tools for the agent."""
-    return [
+    tools = [
         # Variable inspection
         InspectVariableTool(kernel),
         GetVariablesTool(kernel),
@@ -926,3 +954,9 @@ def create_kernel_tools(kernel: KernelInterface) -> List[BaseTool]:
         ReadSourceFromErrorTool(),
         ListUserModulesTool(),
     ]
+
+    # Add file management tools
+    file_tools = get_file_management_tools()
+    tools.extend(file_tools)
+
+    return tools

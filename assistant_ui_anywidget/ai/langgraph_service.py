@@ -157,9 +157,18 @@ def should_require_approval(state: AgentState) -> str:
     if not isinstance(last_message, AIMessage) or not last_message.tool_calls:
         return str(END)
 
-    # Check if any tool call is execute_code
+    # Tools that require approval
+    approval_required_tools = {
+        "execute_code",
+        "write_file",
+        "file_delete",
+        "move_file",
+        "copy_file",
+    }
+
+    # Check if any tool call requires approval
     for tool_call in last_message.tool_calls:
-        if tool_call["name"] == "execute_code":
+        if tool_call["name"] in approval_required_tools:
             return "approval"
 
     # Other tools don't need approval
@@ -167,31 +176,66 @@ def should_require_approval(state: AgentState) -> str:
 
 
 def approval_node(state: AgentState) -> Dict[str, Any]:
-    """Node that handles approval for code execution."""
+    """Node that handles approval for code execution and file operations."""
     if not state.messages:
         return {}
 
     last_message = state.messages[-1]
 
-    # Extract code to be executed
-    code_blocks = []
+    # Extract operations that need approval
+    operations = []
     if isinstance(last_message, AIMessage) and last_message.tool_calls:
         for tool_call in last_message.tool_calls:
-            if tool_call["name"] == "execute_code":
-                code = tool_call["args"]["code"]
-                code_blocks.append(code)
+            tool_name = tool_call["name"]
+            args = tool_call["args"]
+
+            if tool_name == "execute_code":
+                operations.append(
+                    {
+                        "type": "code_execution",
+                        "content": f"Execute code:\n```python\n{args['code']}\n```",
+                    }
+                )
+            elif tool_name == "write_file":
+                operations.append(
+                    {
+                        "type": "file_write",
+                        "content": f"Write to file: {args.get('file_path', 'unknown')}\nContent preview:\n{args.get('text', '')[:200]}...",
+                    }
+                )
+            elif tool_name == "file_delete":
+                operations.append(
+                    {
+                        "type": "file_delete",
+                        "content": f"Delete file: {args.get('file_path', 'unknown')}",
+                    }
+                )
+            elif tool_name == "move_file":
+                operations.append(
+                    {
+                        "type": "file_move",
+                        "content": f"Move file: {args.get('source_path', 'unknown')} → {args.get('destination_path', 'unknown')}",
+                    }
+                )
+            elif tool_name == "copy_file":
+                operations.append(
+                    {
+                        "type": "file_copy",
+                        "content": f"Copy file: {args.get('source_path', 'unknown')} → {args.get('destination_path', 'unknown')}",
+                    }
+                )
 
     # Create approval message
-    approval_msg = "Approve code execution?\n\n"
-    for i, code in enumerate(code_blocks, 1):
-        approval_msg += f"Code block {i}:\n```python\n{code}\n```\n\n"
+    approval_msg = "Approve the following operations?\n\n"
+    for i, op in enumerate(operations, 1):
+        approval_msg += f"{i}. {op['content']}\n\n"
 
     # Interrupt for approval
-    decision = interrupt({"message": approval_msg, "code_blocks": code_blocks})
+    decision = interrupt({"message": approval_msg, "operations": operations})
 
     if decision != APPROVED:
         # User denied - return message and mark as denied
-        denial_msg = HumanMessage(content="Code execution denied by user.")
+        denial_msg = HumanMessage(content="Operation denied by user.")
         return {
             "messages": [denial_msg],
             "pending_approval": False,
