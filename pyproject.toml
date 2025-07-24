@@ -48,6 +48,9 @@ include = [
     "frontend/dist/**/*"
 ]
 
+[tool.hatch.metadata]
+allow-direct-references = true
+
 [tool.hatch.build.targets.wheel]
 packages = ["assistant_ui_anywidget"]
 
@@ -62,7 +65,9 @@ Changelog = "https://github.com/your-org/assistant-ui-anywidget/releases"
 ai = [
     "langchain>=0.1.0",
     "langchain-openai>=0.0.5",
-    "langchain-google-genai>=0.0.5",
+    # Using custom branch until PR is merged: https://github.com/langchain-ai/langchain-google/pull/1056
+    # Fixes Gemini API issue with AIMessage + tool_calls in conversation history
+    "langchain-google-genai @ git+https://github.com/basnijholt/langchain-google.git@fix/gemini-aimessage-tool-calls-conversation-history#subdirectory=libs/genai",
     "langchain-anthropic>=0.1.0",
     "langgraph>=0.0.20",
     "openai>=1.0.0",

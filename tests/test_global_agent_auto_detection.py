@@ -27,7 +27,7 @@ class TestGlobalAgentAutoDetection:
                 # Should have called init_chat_model with OpenAI provider
                 mock_init.assert_called_once()
                 call_args = mock_init.call_args
-                assert call_args.kwargs["model"] == "gpt-4"
+                assert call_args.kwargs["model"] == "gpt-4o-mini"
                 assert call_args.kwargs["model_provider"] == "openai"
 
     def test_get_agent_auto_detection_with_google_key(self) -> None:
@@ -43,7 +43,7 @@ class TestGlobalAgentAutoDetection:
                 # Should have called init_chat_model with Google provider
                 mock_init.assert_called_once()
                 call_args = mock_init.call_args
-                assert call_args.kwargs["model"] == "gemini-2.5-flash"
+                assert call_args.kwargs["model"] == "gemini-1.5-flash"
                 assert call_args.kwargs["model_provider"] == "google_genai"
 
     def test_get_agent_auto_detection_with_explicit_provider(self) -> None:
@@ -107,5 +107,5 @@ class TestGlobalAgentAutoDetection:
                 # Should prefer OpenAI (first in the list)
                 mock_init.assert_called_once()
                 call_args = mock_init.call_args
-                assert call_args.kwargs["model"] == "gpt-4"
+                assert call_args.kwargs["model"] == "gpt-4o-mini"
                 assert call_args.kwargs["model_provider"] == "openai"
