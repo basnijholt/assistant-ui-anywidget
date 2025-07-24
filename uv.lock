@@ -232,21 +232,18 @@ name = "assistant-ui-anywidget"
 source = { editable = "." }
 dependencies = [
     { name = "anywidget" },
-    { name = "langchain-community" },
-    { name = "pydantic-settings" },
-]
-
-[package.optional-dependencies]
-ai = [
     { name = "langchain" },
     { name = "langchain-anthropic" },
+    { name = "langchain-community" },
     { name = "langchain-google-genai" },
     { name = "langchain-openai" },
     { name = "langgraph" },
-    { name = "openai" },
+    { name = "pydantic-settings" },
     { name = "python-dotenv" },
     { name = "pyyaml" },
 ]
+
+[package.optional-dependencies]
 dev = [
     { name = "hatch-jupyter-builder" },
     { name = "hatch-vcs" },
@@ -278,24 +275,23 @@ requires-dist = [
     { name = "hatch-jupyter-builder", marker = "extra == 'dev'" },
     { name = "hatch-vcs", marker = "extra == 'dev'" },
     { name = "jupyterlab", marker = "extra == 'dev'" },
-    { name = "langchain", marker = "extra == 'ai'", specifier = ">=0.1.0" },
-    { name = "langchain-anthropic", marker = "extra == 'ai'", specifier = ">=0.1.0" },
+    { name = "langchain", specifier = ">=0.1.0" },
+    { name = "langchain-anthropic", specifier = ">=0.1.0" },
     { name = "langchain-community", specifier = ">=0.3.27" },
-    { name = "langchain-google-genai", marker = "extra == 'ai'", git = "https://github.com/basnijholt/langchain-google.git?subdirectory=libs%2Fgenai&rev=fix%2Fgemini-aimessage-tool-calls-conversation-history" },
-    { name = "langchain-openai", marker = "extra == 'ai'", specifier = ">=0.0.5" },
-    { name = "langgraph", marker = "extra == 'ai'", specifier = ">=0.0.20" },
+    { name = "langchain-google-genai", git = "https://github.com/basnijholt/langchain-google.git?subdirectory=libs%2Fgenai&rev=fix%2Fgemini-aimessage-tool-calls-conversation-history" },
+    { name = "langchain-openai", specifier = ">=0.0.5" },
+    { name = "langgraph", specifier = ">=0.0.20" },
     { name = "mypy", marker = "extra == 'dev'" },
-    { name = "openai", marker = "extra == 'ai'", specifier = ">=1.0.0" },
     { name = "pre-commit", marker = "extra == 'dev'" },
     { name = "pydantic-settings", specifier = ">=2.10.1" },
     { name = "pytest", marker = "extra == 'dev'" },
     { name = "pytest-cov", marker = "extra == 'dev'" },
-    { name = "python-dotenv", marker = "extra == 'ai'", specifier = ">=1.0.0" },
-    { name = "pyyaml", marker = "extra == 'ai'", specifier = ">=6.0" },
+    { name = "python-dotenv", specifier = ">=1.0.0" },
+    { name = "pyyaml", specifier = ">=6.0" },
     { name = "ruff", marker = "extra == 'dev'" },
     { name = "watchfiles", marker = "extra == 'dev'" },
 ]
-provides-extras = ["ai", "dev"]
+provides-extras = ["dev"]
 
 [package.metadata.requires-dev]
 dev = [
@@ -2175,6 +2171,7 @@ resolution-markers = [
     "python_full_version == '3.12.*'",
     "python_full_version == '3.11.*'",
 ]
+sdist = { url = "https://files.pythonhosted.org/packages/37/7d/3fec4199c5ffb892bed55cff901e4f39a58c81df9c44c280499e92cad264/numpy-2.3.2.tar.gz", hash = "sha256:e0486a11ec30cdecb53f184d496d1c6a20786c81e55e41640270130056f8ee48", size = 20489306, upload-time = "2025-07-24T21:32:07.553Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/96/26/1320083986108998bd487e2931eed2aeedf914b6e8905431487543ec911d/numpy-2.3.2-cp311-cp311-macosx_10_9_x86_64.whl", hash = "sha256:852ae5bed3478b92f093e30f785c98e0cb62fa0a939ed057c31716e18a7a22b9", size = 21259016, upload-time = "2025-07-24T20:24:35.214Z" },
     { url = "https://files.pythonhosted.org/packages/c4/2b/792b341463fa93fc7e55abbdbe87dac316c5b8cb5e94fb7a59fb6fa0cda5/numpy-2.3.2-cp311-cp311-macosx_11_0_arm64.whl", hash = "sha256:7a0e27186e781a69959d0230dd9909b5e26024f8da10683bd6344baea1885168", size = 14451158, upload-time = "2025-07-24T20:24:58.397Z" },
@@ -2247,6 +2244,8 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/83/85/27280c7f34fcd305c2209c0cdca4d70775e4859a9eaa92f850087f8dea50/numpy-2.3.2-pp311-pypy311_pp73-macosx_14_0_arm64.whl", hash = "sha256:69779198d9caee6e547adb933941ed7520f896fd9656834c300bdf4dd8642712", size = 5304882, upload-time = "2025-07-24T20:58:26.199Z" },
     { url = "https://files.pythonhosted.org/packages/48/b4/6500b24d278e15dd796f43824e69939d00981d37d9779e32499e823aa0aa/numpy-2.3.2-pp311-pypy311_pp73-macosx_14_0_x86_64.whl", hash = "sha256:2c3271cc4097beb5a60f010bcc1cc204b300bb3eafb4399376418a83a1c6373c", size = 6818405, upload-time = "2025-07-24T20:58:37.341Z" },
     { url = "https://files.pythonhosted.org/packages/9b/c9/142c1e03f199d202da8e980c2496213509291b6024fd2735ad28ae7065c7/numpy-2.3.2-pp311-pypy311_pp73-manylinux_2_27_aarch64.manylinux_2_28_aarch64.whl", hash = "sha256:8446acd11fe3dc1830568c941d44449fd5cb83068e5c70bd5a470d323d448296", size = 14419651, upload-time = "2025-07-24T20:58:59.048Z" },
+    { url = "https://files.pythonhosted.org/packages/8b/95/8023e87cbea31a750a6c00ff9427d65ebc5fef104a136bfa69f76266d614/numpy-2.3.2-pp311-pypy311_pp73-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:aa098a5ab53fa407fded5870865c6275a5cd4101cfdef8d6fafc48286a96e981", size = 16760166, upload-time = "2025-07-24T21:28:56.38Z" },
+    { url = "https://files.pythonhosted.org/packages/78/e3/6690b3f85a05506733c7e90b577e4762517404ea78bab2ca3a5cb1aeb78d/numpy-2.3.2-pp311-pypy311_pp73-win_amd64.whl", hash = "sha256:6936aff90dda378c09bea075af0d9c675fe3a977a9d2402f95a87f440f59f619", size = 12977811, upload-time = "2025-07-24T21:29:18.234Z" },
 ]
 
 [[package]]
