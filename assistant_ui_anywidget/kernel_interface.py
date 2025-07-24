@@ -183,11 +183,21 @@ class KernelInterface:
         """Initialize the kernel interface."""
         self.shell: Optional[InteractiveShell] = get_ipython() if get_ipython else None
         self._namespace_snapshot: Dict[str, Any] = {}
+        self._execution_callback: Optional[Any] = (
+            None  # Callback for code execution tracking
+        )
 
     @property
     def is_available(self) -> bool:
         """Check if kernel is available."""
         return self.shell is not None
+
+    def set_execution_callback(self, callback: Any) -> None:
+        """Set a callback to be called whenever code is executed.
+
+        The callback should accept (code: str, result: ExecutionResult).
+        """
+        self._execution_callback = callback
 
     def get_namespace(self) -> Dict[str, Any]:
         """Get current namespace variables."""
@@ -391,7 +401,7 @@ class KernelInterface:
                     },
                 )
 
-            return ExecutionResult(
+            result_obj = ExecutionResult(
                 success=True,
                 execution_count=self.shell.execution_count if self.shell else 0,
                 outputs=outputs,
@@ -399,8 +409,14 @@ class KernelInterface:
                 variables_changed=variables_changed,
             )
 
+            # Call the execution callback if set
+            if self._execution_callback and not silent:
+                self._execution_callback(code, result_obj)
+
+            return result_obj
+
         except Exception as e:
-            return ExecutionResult(
+            result_obj = ExecutionResult(
                 success=False,
                 execution_count=self.shell.execution_count if self.shell else 0,
                 outputs=[],
@@ -412,6 +428,12 @@ class KernelInterface:
                     "traceback": traceback.format_exc().split("\n"),
                 },
             )
+
+            # Call the execution callback if set
+            if self._execution_callback and not silent:
+                self._execution_callback(code, result_obj)
+
+            return result_obj
 
     def _format_traceback(self, error: Exception) -> List[str]:
         """Format exception traceback."""

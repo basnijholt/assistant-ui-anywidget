@@ -51,6 +51,9 @@ class AgentWidget(anywidget.AnyWidget):
         self.kernel = KernelInterface()
         self.handlers = SimpleHandlers(self.kernel)
 
+        # Set up code execution callback
+        self.kernel.set_execution_callback(self._on_code_executed)
+
         # Initialize thread ID
         self._thread_id: Optional[str] = None
 
@@ -625,3 +628,25 @@ for var in list(globals().keys()):
             log_path = self.ai_service.conversation_logger.get_current_log_path()
             return str(log_path) if log_path else None
         return None
+
+    def _on_code_executed(self, code: str, result: Any) -> None:
+        """Callback for when code is executed through the kernel interface."""
+        # Extract output text from the result
+        output_text = None
+        if result.success and result.outputs:
+            output_parts = []
+            for output in result.outputs:
+                if output["type"] == "execute_result":
+                    output_parts.append(output["data"]["text/plain"])
+            if output_parts:
+                output_text = "\n".join(output_parts)
+        elif not result.success and result.error:
+            output_text = f"Error: {result.error['type']}: {result.error['message']}"
+
+        # Add to code history
+        self.add_code_to_history(
+            code=code,
+            execution_count=result.execution_count,
+            success=result.success,
+            output=output_text,
+        )
