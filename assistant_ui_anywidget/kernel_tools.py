@@ -5,6 +5,7 @@ from langchain_core.tools import BaseTool
 from pydantic import BaseModel, Field
 
 from .kernel_interface import KernelInterface
+from .module_inspector import ModuleInspector
 
 
 class InspectVariableInput(BaseModel):
@@ -421,14 +422,160 @@ class GetCellTool(BaseTool):
         return "\n".join(lines)
 
 
+class ReadModuleSourceInput(BaseModel):
+    """Input for read_module_source tool."""
+
+    module_name: str = Field(
+        description="Name of the module (e.g., 'my_package.my_module')"
+    )
+    function_name: Optional[str] = Field(
+        default=None,
+        description="Optional: specific function/class to read within the module",
+    )
+
+
+class ReadSourceFromErrorInput(BaseModel):
+    """Input for read_source_from_error tool."""
+
+    error_traceback: List[str] = Field(
+        description="List of traceback lines from the error"
+    )
+    context_lines: int = Field(
+        default=5, description="Number of lines to show before and after the error line"
+    )
+
+
+class ReadModuleSourceTool(BaseTool):
+    """Tool for reading source code of imported modules."""
+
+    name: str = "read_module_source"
+    description: str = (
+        "Read the source code of an imported module or a specific function/class within it. "
+        "Use this when debugging errors that occur inside user packages or when users want to "
+        "understand how their imported code works. Only works for Python modules, not built-ins."
+    )
+    args_schema: Type[BaseModel] = ReadModuleSourceInput
+
+    def _run(self, module_name: str, function_name: Optional[str] = None) -> str:
+        """Read module or function source code."""
+        if function_name:
+            source = ModuleInspector.get_function_source(module_name, function_name)
+            if source:
+                return f"Source of {module_name}.{function_name}:\n\n```python\n{source}\n```"
+            else:
+                return f"Could not find function '{function_name}' in module '{module_name}'"
+        else:
+            source = ModuleInspector.get_module_source(module_name)
+            if source:
+                # Limit to first 1000 lines for very large modules
+                lines = source.splitlines()
+                if len(lines) > 1000:
+                    source = "\n".join(lines[:1000])
+                    source += f"\n\n... (truncated, showing first 1000 lines of {len(lines)} total)"
+                return f"Source of module {module_name}:\n\n```python\n{source}\n```"
+            else:
+                return f"Could not read source for module '{module_name}'. It may be a built-in or compiled module."
+
+
+class ReadSourceFromErrorTool(BaseTool):
+    """Tool for reading source code from error tracebacks."""
+
+    name: str = "read_source_from_error"
+    description: str = (
+        "Extract file references from an error traceback and read the relevant source code. "
+        "This is extremely useful for debugging - it shows the exact code that caused the error "
+        "with context lines before and after. Use this immediately when you see an error traceback."
+    )
+    args_schema: Type[BaseModel] = ReadSourceFromErrorInput
+
+    def _run(self, error_traceback: List[str], context_lines: int = 5) -> str:
+        """Read source code from error traceback."""
+        references = ModuleInspector.find_in_traceback(error_traceback)
+
+        if not references:
+            return "No file references found in the traceback"
+
+        results = []
+        for file_path, line_num, func_name in references:
+            # Skip standard library files
+            if "site-packages" in file_path or "dist-packages" in file_path:
+                continue
+
+            source = ModuleInspector.read_source_around_line(
+                file_path, line_num, context_lines
+            )
+            if source:
+                results.append(
+                    f"File: {file_path}\nFunction: {func_name}\nLine {line_num}:\n\n{source}"
+                )
+
+        if not results:
+            return "Could not read source code from the traceback (files may be from standard library)"
+
+        return "\n\n" + ("=" * 50) + "\n\n".join(results)
+
+
+class ListUserModulesInput(BaseModel):
+    """Input for list_user_modules tool."""
+
+    pattern: Optional[str] = Field(
+        default=None, description="Optional pattern to filter module names"
+    )
+
+
+class ListUserModulesTool(BaseTool):
+    """Tool for listing user-imported modules."""
+
+    name: str = "list_user_modules"
+    description: str = (
+        "List all user-imported modules (excluding standard library and installed packages). "
+        "This shows which custom modules are available to inspect. Useful for understanding "
+        "the structure of the user's code."
+    )
+    args_schema: Type[BaseModel] = ListUserModulesInput
+
+    def _run(self, pattern: Optional[str] = None) -> str:
+        """List user modules."""
+        modules = ModuleInspector.get_user_modules()
+
+        if not modules:
+            return "No user modules found in sys.modules"
+
+        # Filter by pattern if provided
+        if pattern:
+            pattern_lower = pattern.lower()
+            modules = {
+                name: path
+                for name, path in modules.items()
+                if pattern_lower in name.lower()
+            }
+
+            if not modules:
+                return f"No user modules found matching pattern '{pattern}'"
+
+        lines = [f"User modules ({len(modules)} found):"]
+        for name, path in sorted(modules.items()):
+            lines.append(f"  - {name}: {path}")
+
+        return "\n".join(lines)
+
+
 def create_kernel_tools(kernel: KernelInterface) -> List[BaseTool]:
     """Create all kernel tools for the agent."""
     return [
+        # Variable inspection
         InspectVariableTool(kernel),
-        ExecuteCodeTool(kernel),
         GetVariablesTool(kernel),
+        # Code execution
+        ExecuteCodeTool(kernel),
+        # Kernel info
         KernelInfoTool(kernel),
+        # Notebook state
         GetNotebookStateTool(kernel),
         SearchNotebookTool(kernel),
         GetCellTool(kernel),
+        # Module inspection (new!)
+        ReadModuleSourceTool(),
+        ReadSourceFromErrorTool(),
+        ListUserModulesTool(),
     ]
