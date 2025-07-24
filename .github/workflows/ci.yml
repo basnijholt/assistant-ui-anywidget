@@ -29,12 +29,11 @@ jobs:
           cache-dependency-path: frontend/package-lock.json
 
       - name: Install uv
-        run: curl -LsSf https://astral.sh/uv/install.sh | sh
+        uses: astral-sh/setup-uv@v6
 
       - name: Install dependencies
         run: |
-          source ~/.bashrc
-          uv sync --all-extras
+          uv sync
 
       - name: Install frontend dependencies
         run: |
@@ -48,12 +47,10 @@ jobs:
 
       - name: Run pre-commit
         run: |
-          source ~/.bashrc
           uv run pre-commit run --all-files
 
       - name: Run tests with pytest
         run: |
-          source ~/.bashrc
           uv run pytest --verbose --tb=short
 
   test-frontend:
@@ -104,11 +101,10 @@ jobs:
           cache-dependency-path: frontend/package-lock.json
 
       - name: Install uv
-        run: curl -LsSf https://astral.sh/uv/install.sh | sh
+        uses: astral-sh/setup-uv@v6
 
       - name: Install Python dependencies
         run: |
-          source ~/.bashrc
           uv sync --all-extras
 
       - name: Install Node dependencies and build frontend
@@ -119,5 +115,4 @@ jobs:
 
       - name: Run integration tests
         run: |
-          source ~/.bashrc
           uv run pytest tests/ --verbose
