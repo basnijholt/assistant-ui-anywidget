@@ -10,7 +10,16 @@ import sys
 # Add the python module to the path
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "python"))  # noqa: PTH118, PTH120
 
+from typing import Any
+
 from assistant_ui_anywidget.agent_widget import AgentWidget
+
+
+def create_test_widget(**kwargs: Any) -> AgentWidget:
+    """Create a widget for testing without AI service."""
+    kwargs.setdefault("enable_ai", False)
+    kwargs.setdefault("show_help", False)
+    return AgentWidget(**kwargs)
 
 
 class TestChatHistorySynchronization:
@@ -18,13 +27,13 @@ class TestChatHistorySynchronization:
 
     def test_initial_empty_state(self) -> None:
         """Test that widget starts with empty chat history."""
-        widget = AgentWidget()
+        widget = create_test_widget()
         assert widget.chat_history == []
         assert len(widget.chat_history) == 0
 
     def test_add_message_python_api(self) -> None:
         """Test adding messages using Python API."""
-        widget = AgentWidget()
+        widget = create_test_widget()
 
         # Add user message
         widget.add_message("user", "Hello from Python!")
@@ -40,7 +49,7 @@ class TestChatHistorySynchronization:
 
     def test_get_chat_history(self) -> None:
         """Test getting chat history returns a copy."""
-        widget = AgentWidget()
+        widget = create_test_widget()
         widget.add_message("user", "Test message")
 
         history = widget.get_chat_history()
@@ -49,7 +58,7 @@ class TestChatHistorySynchronization:
 
     def test_clear_chat_history(self) -> None:
         """Test clearing chat history."""
-        widget = AgentWidget()
+        widget = create_test_widget()
         widget.add_message("user", "Test message 1")
         widget.add_message("assistant", "Test response 1")
 
@@ -61,7 +70,7 @@ class TestChatHistorySynchronization:
 
     def test_direct_assignment(self) -> None:
         """Test directly assigning chat history."""
-        widget = AgentWidget()
+        widget = create_test_widget()
 
         new_history = [
             {"role": "user", "content": "Hello"},
@@ -75,7 +84,7 @@ class TestChatHistorySynchronization:
 
     def test_ui_message_handling(self) -> None:
         """Test handling messages from UI (JavaScript)."""
-        widget = AgentWidget()
+        widget = create_test_widget()
 
         # Simulate UI sending a message
         message_content = {"type": "user_message", "text": "Hello from UI"}
@@ -88,7 +97,7 @@ class TestChatHistorySynchronization:
 
     def test_ui_message_no_auto_response(self) -> None:
         """Test that UI messages don't generate automatic responses."""
-        widget = AgentWidget()
+        widget = create_test_widget()
 
         # Send message from UI
         widget._handle_message(None, {"type": "user_message", "text": "Test"})
@@ -99,7 +108,7 @@ class TestChatHistorySynchronization:
 
     def test_multiple_ui_messages(self) -> None:
         """Test handling multiple UI messages."""
-        widget = AgentWidget()
+        widget = create_test_widget()
 
         # Send multiple messages
         widget._handle_message(None, {"type": "user_message", "text": "First"})
@@ -113,7 +122,7 @@ class TestChatHistorySynchronization:
 
     def test_mixed_message_sources(self) -> None:
         """Test mixing UI messages and Python API messages."""
-        widget = AgentWidget()
+        widget = create_test_widget()
 
         # Add from Python API
         widget.add_message("user", "From Python")
@@ -131,7 +140,7 @@ class TestChatHistorySynchronization:
 
     def test_message_format_validation(self) -> None:
         """Test that messages have correct format."""
-        widget = AgentWidget()
+        widget = create_test_widget()
 
         widget.add_message("user", "Test message")
         message = widget.chat_history[0]
@@ -144,7 +153,7 @@ class TestChatHistorySynchronization:
 
     def test_empty_message_handling(self) -> None:
         """Test handling empty messages."""
-        widget = AgentWidget()
+        widget = create_test_widget()
 
         # Send empty message from UI
         widget._handle_message(None, {"type": "user_message", "text": ""})
@@ -155,7 +164,7 @@ class TestChatHistorySynchronization:
 
     def test_invalid_message_type(self) -> None:
         """Test handling invalid message types."""
-        widget = AgentWidget()
+        widget = create_test_widget()
 
         # Send invalid message type
         widget._handle_message(None, {"type": "invalid_type", "text": "test"})
@@ -165,7 +174,7 @@ class TestChatHistorySynchronization:
 
     def test_clear_after_messages(self) -> None:
         """Test clearing after adding messages."""
-        widget = AgentWidget()
+        widget = create_test_widget()
 
         # Add some messages
         widget.add_message("user", "Message 1")
@@ -184,7 +193,7 @@ class TestChatHistorySynchronization:
 
     def test_large_chat_history(self) -> None:
         """Test handling large chat histories."""
-        widget = AgentWidget()
+        widget = create_test_widget()
 
         # Add 100 messages
         for i in range(100):
@@ -198,7 +207,7 @@ class TestChatHistorySynchronization:
 
     def test_chat_history_persistence(self) -> None:
         """Test that chat history persists across operations."""
-        widget = AgentWidget()
+        widget = create_test_widget()
 
         # Add initial messages
         widget.add_message("user", "Persistent message")
@@ -218,7 +227,7 @@ class TestUISimulation:
 
     def test_ui_simulation_single_message(self) -> None:
         """Test simulating a single UI message."""
-        widget = AgentWidget()
+        widget = create_test_widget()
 
         # Simulate UI sending message
         before_count = len(widget.chat_history)
@@ -231,7 +240,7 @@ class TestUISimulation:
 
     def test_ui_simulation_multiple_messages(self) -> None:
         """Test simulating multiple UI messages."""
-        widget = AgentWidget()
+        widget = create_test_widget()
 
         messages = ["First", "Second", "Third"]
 
@@ -245,7 +254,7 @@ class TestUISimulation:
 
     def test_ui_simulation_with_existing_history(self) -> None:
         """Test UI simulation with existing chat history."""
-        widget = AgentWidget()
+        widget = create_test_widget()
 
         # Add existing messages
         widget.add_message("user", "Existing message")
@@ -261,7 +270,7 @@ class TestUISimulation:
 
     def test_ui_simulation_after_clear(self) -> None:
         """Test UI simulation after clearing history."""
-        widget = AgentWidget()
+        widget = create_test_widget()
 
         # Add and clear messages
         widget.add_message("user", "To be cleared")
@@ -279,7 +288,7 @@ class TestMessageIntegrity:
 
     def test_message_immutability(self) -> None:
         """Test that messages don't get mutated unexpectedly."""
-        widget = AgentWidget()
+        widget = create_test_widget()
 
         original_message = {"role": "user", "content": "Original"}
         widget.chat_history = [original_message.copy()]
@@ -294,7 +303,7 @@ class TestMessageIntegrity:
 
     def test_concurrent_operations(self) -> None:
         """Test concurrent-like operations on chat history."""
-        widget = AgentWidget()
+        widget = create_test_widget()
 
         # Simulate rapid operations
         widget.add_message("user", "Rapid 1")
@@ -310,7 +319,7 @@ class TestMessageIntegrity:
 
     def test_data_types_preservation(self) -> None:
         """Test that data types are preserved correctly."""
-        widget = AgentWidget()
+        widget = create_test_widget()
 
         # Test various content types
         test_cases = [

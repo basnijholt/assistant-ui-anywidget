@@ -12,13 +12,22 @@ import pytest
 # Add the python module to the path
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "python"))  # noqa: PTH118, PTH120
 
+from typing import Any
+
 from assistant_ui_anywidget.agent_widget import AgentWidget
+
+
+def create_test_widget(**kwargs: Any) -> AgentWidget:
+    """Create a widget for testing without AI service."""
+    kwargs.setdefault("enable_ai", False)
+    kwargs.setdefault("show_help", False)
+    return AgentWidget(**kwargs)
 
 
 @pytest.fixture  # type: ignore[misc]
 def widget() -> AgentWidget:
     """Create a fresh widget instance for each test."""
-    return AgentWidget()
+    return create_test_widget()
 
 
 class TestChatHistorySynchronization:

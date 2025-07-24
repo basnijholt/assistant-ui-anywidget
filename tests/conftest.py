@@ -10,7 +10,7 @@ from assistant_ui_anywidget.agent_widget import AgentWidget
 @pytest.fixture  # type: ignore[misc]
 def widget() -> AgentWidget:
     """Create a fresh widget instance for each test."""
-    return AgentWidget()
+    return AgentWidget(enable_ai=False, show_help=False)
 
 
 @pytest.fixture  # type: ignore[misc]

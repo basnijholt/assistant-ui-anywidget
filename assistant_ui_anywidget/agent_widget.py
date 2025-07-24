@@ -52,7 +52,8 @@ class AgentWidget(anywidget.AnyWidget):
         max_tokens: int = 2000,
         system_prompt: str = "You are a helpful AI assistant with access to the Jupyter kernel...",
         require_approval: bool = False,
-        show_help: bool = False,
+        show_help: bool = True,
+        enable_ai: bool = True,
         **kwargs: Any,
     ) -> None:
         """Initialize the widget."""
@@ -71,25 +72,29 @@ class AgentWidget(anywidget.AnyWidget):
         # Initialize AI service
         self.ai_service: Optional[LangGraphAIService] = None
 
-        # Create AIConfig from parameters
-        config = AIConfig(
-            model=model,
-            provider=provider,
-            temperature=temperature,
-            max_tokens=max_tokens,
-            system_prompt=system_prompt,
-            require_approval=require_approval,
-        )
+        if enable_ai:
+            # Create AIConfig from parameters
+            config = AIConfig(
+                model=model,
+                provider=provider,
+                temperature=temperature,
+                max_tokens=max_tokens,
+                system_prompt=system_prompt,
+                require_approval=require_approval,
+            )
 
-        self.ai_config = config.to_dict()
+            self.ai_config = config.to_dict()
 
-        # Always use LangGraph service
-        self.ai_service = LangGraphAIService(
-            kernel=self.kernel,
-            model=model,
-            provider=provider,
-            require_approval=require_approval,
-        )
+            # Always use LangGraph service
+            self.ai_service = LangGraphAIService(
+                kernel=self.kernel,
+                model=model,
+                provider=provider,
+                require_approval=require_approval,
+            )
+        else:
+            # No AI service for testing or kernel-only mode
+            self.ai_config = {}
 
         # Set up message handling
         self.on_msg(self._handle_message)
