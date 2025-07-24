@@ -22,6 +22,7 @@ class MockKernel:
         self.is_available = True
         self.namespace = {"x": 42, "y": "hello", "df": Mock()}
         self.execution_count = 0
+        self._execution_callback = None
 
     def get_namespace(self) -> dict[str, Any]:
         if not self.is_available:
@@ -55,13 +56,21 @@ class MockKernel:
         """Get the last error from the kernel."""
         return None  # No error for testing
 
+    def set_execution_callback(self, callback: Any) -> None:
+        """Set a callback to be called whenever code is executed."""
+        self._execution_callback = callback
+
+    def get_imported_modules(self) -> dict[str, str]:
+        """Get modules that have been imported in the namespace."""
+        return {"pandas": "external", "numpy": "external", "os": "builtin"}
+
     def execute_code(
         self, code: str, silent: bool = False, store_history: bool = True
     ) -> ExecutionResult:
         self.execution_count += 1
 
         if code == "1 + 1":
-            return ExecutionResult(
+            result = ExecutionResult(
                 success=True,
                 execution_count=self.execution_count,
                 outputs=[{"type": "execute_result", "data": {"text/plain": "2"}}],
@@ -69,7 +78,7 @@ class MockKernel:
                 variables_changed=[],
             )
         elif code.startswith("raise"):
-            return ExecutionResult(
+            result = ExecutionResult(
                 success=False,
                 execution_count=self.execution_count,
                 outputs=[],
@@ -84,7 +93,7 @@ class MockKernel:
         elif "del globals()" in code:
             # Simulate clearing namespace
             self.namespace.clear()
-            return ExecutionResult(
+            result = ExecutionResult(
                 success=True,
                 execution_count=self.execution_count,
                 outputs=[],
@@ -92,13 +101,19 @@ class MockKernel:
                 variables_changed=[],
             )
         else:
-            return ExecutionResult(
+            result = ExecutionResult(
                 success=True,
                 execution_count=self.execution_count,
                 outputs=[],
                 execution_time=0.001,
                 variables_changed=[],
             )
+
+        # Call the callback if set (to simulate real behavior)
+        if self._execution_callback:
+            self._execution_callback(code, result)  # type: ignore[unreachable]
+
+        return result
 
     def get_notebook_inputs(self) -> dict[int, str]:
         """Mock notebook inputs."""
