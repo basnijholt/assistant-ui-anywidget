@@ -91,56 +91,37 @@ def init_llm(
     **kwargs: Any,
 ) -> BaseChatModel:
     """Initialize language model with simple provider detection."""
-    # Auto-detect if provider is None or "auto"
-    if not provider or provider == "auto":
-        providers = [
-            ("openai", "gpt-4", "OPENAI_API_KEY"),
-            ("anthropic", "claude-3-opus-20240229", "ANTHROPIC_API_KEY"),
-            ("google_genai", "gemini-2.5-flash", "GOOGLE_API_KEY"),
-        ]
 
-        for prov, default_model, env_var in providers:
-            if os.getenv(env_var):
-                try:
-                    # For auto-detection, use the provider's default model unless
-                    # the provided model is compatible with this provider
-                    if model:
-                        # Check if the provided model is compatible with this provider
-                        if prov == "openai" and model.startswith(("gpt-", "o1-")):
-                            use_model = model
-                        elif prov == "anthropic" and model.startswith("claude-"):
-                            use_model = model
-                        elif prov == "google_genai" and model.startswith("gemini-"):
-                            use_model = model
-                        else:
-                            # Model not compatible, use provider default
-                            use_model = default_model
-                    else:
-                        use_model = default_model
+    # If explicit provider given, use it
+    if provider and provider != "auto":
+        try:
+            use_model = model or "gpt-4o-mini"
+            return init_chat_model(model=use_model, model_provider=provider, **kwargs)
+        except Exception as e:
+            logger.error(f"Failed to initialize {provider}/{model}: {e}")
 
-                    return init_chat_model(
-                        model=use_model, model_provider=prov, **kwargs
-                    )
-                except Exception as e:
-                    logger.error(f"Failed to initialize {prov}: {e}")
-                    continue
+    # Auto-detect: try providers in order based on available API keys
+    providers = [
+        ("openai", "gpt-4o-mini", "OPENAI_API_KEY"),
+        ("anthropic", "claude-3-haiku-20240307", "ANTHROPIC_API_KEY"),
+        ("google_genai", "gemini-1.5-flash", "GOOGLE_API_KEY"),
+    ]
 
-        # Fallback to mock
-        logger.warning("No AI provider available, using mock")
-        from .mock import MockLLM
+    for prov, default_model, env_var in providers:
+        if os.getenv(env_var):
+            try:
+                use_model = model or default_model
+                logger.info(f"Initializing {prov} with model {use_model}")
+                return init_chat_model(model=use_model, model_provider=prov, **kwargs)
+            except Exception as e:
+                logger.warning(f"Failed to initialize {prov}: {e}")
+                continue
 
-        return MockLLM()
+    # Fallback to mock
+    logger.warning("No AI provider available, using mock")
+    from .mock import MockLLM
 
-    # Use explicit provider/model
-    try:
-        use_model = model or "gpt-4"
-        return init_chat_model(model=use_model, model_provider=provider, **kwargs)
-    except Exception as e:
-        logger.error(f"Failed to initialize {provider}/{model}: {e}")
-        logger.warning("Falling back to mock")
-        from .mock import MockLLM
-
-        return MockLLM()
+    return MockLLM()
 
 
 def should_continue(state: AgentState) -> str:
