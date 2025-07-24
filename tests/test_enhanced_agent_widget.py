@@ -214,6 +214,7 @@ def widget(mock_kernel: MockKernel) -> AgentWidget:
             # Create widget without API keys to force mock AI
             widget = AgentWidget(
                 require_approval=False,
+                show_help=False,  # Disable welcome message for tests
             )
             widget.kernel = mock_kernel  # type: ignore[assignment]
             return widget
