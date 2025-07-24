@@ -1,5 +1,7 @@
 """Kernel-specific tools for LangGraph agent."""
 
+import os
+import subprocess
 from typing import Any, Dict, List, Optional, Type
 from langchain_core.tools import BaseTool
 from pydantic import BaseModel, Field
@@ -523,6 +525,347 @@ class ListUserModulesInput(BaseModel):
     )
 
 
+class ListFilesInput(BaseModel):
+    """Input for list_files tool."""
+
+    directory: str = Field(
+        default=".",
+        description="Directory to list files from (default: current directory)",
+    )
+    git_tracked_only: bool = Field(
+        default=True,
+        description="Whether to show only git-tracked files (default: True)",
+    )
+    recursive: bool = Field(
+        default=False, description="Whether to list files recursively in subdirectories"
+    )
+    pattern: Optional[str] = Field(
+        default=None, description="Optional pattern to filter filenames (glob pattern)"
+    )
+
+
+class GitGrepInput(BaseModel):
+    """Input for git_grep tool."""
+
+    search_term: str = Field(description="Text to search for in files")
+    file_pattern: Optional[str] = Field(
+        default=None, description="Optional file pattern to limit search (e.g., '*.py')"
+    )
+    case_sensitive: bool = Field(
+        default=False, description="Whether the search should be case sensitive"
+    )
+    context_lines: int = Field(
+        default=2,
+        description="Number of context lines to show before and after matches",
+    )
+
+
+class GitFindInput(BaseModel):
+    """Input for git_find tool."""
+
+    name_pattern: str = Field(description="Pattern to search for in filenames")
+    file_type: Optional[str] = Field(
+        default=None,
+        description="Optional file type filter (e.g., 'f' for files, 'd' for directories)",
+    )
+    case_sensitive: bool = Field(
+        default=False, description="Whether the search should be case sensitive"
+    )
+
+
+class ListFilesTool(BaseTool):
+    """Tool for listing files, with git-aware functionality."""
+
+    name: str = "list_files"
+    description: str = (
+        "List files in a directory. By default, only shows git-tracked files to focus on "
+        "relevant code files and avoid build artifacts, cache files, etc. Use this when you need "
+        "to understand the structure of a project or find specific files. Perfect for exploring "
+        "codebases and understanding what files are available to work with."
+    )
+    args_schema: Type[BaseModel] = ListFilesInput
+
+    def _run(
+        self,
+        directory: str = ".",
+        git_tracked_only: bool = True,
+        recursive: bool = False,
+        pattern: Optional[str] = None,
+    ) -> str:
+        """List files in directory."""
+        try:
+            if git_tracked_only:
+                # Check if we're in a git repository
+                result = subprocess.run(
+                    ["git", "rev-parse", "--is-inside-work-tree"],
+                    cwd=directory,
+                    capture_output=True,
+                    text=True,
+                )
+
+                if result.returncode != 0:
+                    return f"Not a git repository: {directory}. Use git_tracked_only=False to list all files."
+
+                # Get git-tracked files
+                cmd = ["git", "ls-files"]
+                if pattern:
+                    cmd.extend(["--", pattern])
+
+                result = subprocess.run(
+                    cmd, cwd=directory, capture_output=True, text=True
+                )
+
+                if result.returncode != 0:
+                    return f"Error listing git-tracked files: {result.stderr}"
+
+                files = (
+                    result.stdout.strip().split("\n") if result.stdout.strip() else []
+                )
+
+                # Early return if no files found
+                if not files or files == [""]:
+                    return f"No files found in {directory}"
+
+                # Filter by recursive setting - for simplicity, when git_tracked_only=True,
+                # we mostly want to see all tracked files unless explicitly non-recursive
+                if not recursive and directory == ".":
+                    # Show only files in the current directory (no subdirectories)
+                    files = [f for f in files if "/" not in f]
+                # For other cases (specific directory or recursive), show all files
+
+            else:
+                # List all files using os.listdir or os.walk
+                import fnmatch
+
+                if recursive:
+                    files = []
+                    for root, dirs, filenames in os.walk(directory):
+                        for filename in filenames:
+                            if pattern is None or fnmatch.fnmatch(filename, pattern):
+                                files.append(
+                                    os.path.relpath(
+                                        os.path.join(root, filename), directory
+                                    )
+                                )
+                else:
+                    try:
+                        all_items = os.listdir(directory)
+                        files = [
+                            item
+                            for item in all_items
+                            if os.path.isfile(os.path.join(directory, item))
+                            and (pattern is None or fnmatch.fnmatch(item, pattern))
+                        ]
+                    except OSError as e:
+                        return f"Error listing directory {directory}: {e}"
+
+            if not files:
+                return f"No files found in {directory}"
+
+            # Format output
+            files.sort()
+            total = len(files)
+            lines = [
+                f"Files in {directory} ({'git-tracked only' if git_tracked_only else 'all files'}):",
+                f"Total: {total} files",
+                "",
+            ]
+
+            # Group by file extension for better readability
+            by_ext: Dict[str, List[str]] = {}
+            for f in files:
+                ext = os.path.splitext(f)[1] or "(no extension)"
+                if ext not in by_ext:
+                    by_ext[ext] = []
+                by_ext[ext].append(f)
+
+            for ext in sorted(by_ext.keys()):
+                ext_files = by_ext[ext]
+                lines.append(f"{ext} ({len(ext_files)} files):")
+                for f in ext_files[:20]:  # Limit to first 20 files per extension
+                    lines.append(f"  {f}")
+                if len(ext_files) > 20:
+                    lines.append(f"  ... and {len(ext_files) - 20} more")
+                lines.append("")
+
+            return "\n".join(lines)
+
+        except Exception as e:
+            return f"Error listing files: {e}"
+
+
+class GitGrepTool(BaseTool):
+    """Tool for searching file contents in git-tracked files."""
+
+    name: str = "git_grep"
+    description: str = (
+        "Search for text within git-tracked files using git grep. This is much faster than "
+        "regular grep and automatically excludes files that aren't tracked by git (like build "
+        "artifacts, logs, etc.). Use this when you need to find where specific code, functions, "
+        "or text appears in the project."
+    )
+    args_schema: Type[BaseModel] = GitGrepInput
+
+    def _run(
+        self,
+        search_term: str,
+        file_pattern: Optional[str] = None,
+        case_sensitive: bool = False,
+        context_lines: int = 2,
+    ) -> str:
+        """Search for text in git-tracked files."""
+        try:
+            # Check if we're in a git repository
+            result = subprocess.run(
+                ["git", "rev-parse", "--is-inside-work-tree"],
+                capture_output=True,
+                text=True,
+            )
+
+            if result.returncode != 0:
+                return "Not a git repository. Use regular search tools for non-git directories."
+
+            # Build git grep command
+            cmd = ["git", "grep", "-n"]  # -n for line numbers
+
+            if not case_sensitive:
+                cmd.append("-i")
+
+            if context_lines > 0:
+                cmd.extend(["-C", str(context_lines)])
+
+            cmd.append(search_term)
+
+            if file_pattern:
+                cmd.extend(["--", file_pattern])
+
+            result = subprocess.run(cmd, capture_output=True, text=True)
+
+            if result.returncode != 0:
+                if result.returncode == 1:
+                    return f"No matches found for '{search_term}'"
+                else:
+                    return f"Error running git grep: {result.stderr}"
+
+            lines = result.stdout.strip().split("\n")
+            if not lines or lines == [""]:
+                return f"No matches found for '{search_term}'"
+
+            # Format output for better readability
+            output_lines = [f"Found {len(lines)} matches for '{search_term}':", ""]
+
+            current_file = None
+            for line in lines:
+                if ":" in line:
+                    parts = line.split(":", 2)
+                    if len(parts) >= 3:
+                        file_path, line_num, content = parts[0], parts[1], parts[2]
+                        if "-" in line_num:  # Context line (like "5-")
+                            line_num = line_num.rstrip("-")
+                            prefix = "  "
+                        else:  # Match line
+                            prefix = "→ "
+                    elif len(parts) == 2:
+                        # Fallback for lines with only one colon
+                        file_path, content = parts[0], parts[1]
+                        line_num = "?"
+                        prefix = "→ "
+                    else:
+                        # Skip malformed lines
+                        continue
+
+                    if file_path != current_file:
+                        if current_file is not None:
+                            output_lines.append("")
+                        output_lines.append(f"File: {file_path}")
+                        current_file = file_path
+
+                    output_lines.append(f"{prefix}{line_num}: {content}")
+
+            return "\n".join(output_lines)
+
+        except Exception as e:
+            return f"Error searching files: {e}"
+
+
+class GitFindTool(BaseTool):
+    """Tool for finding files by name in git-tracked files."""
+
+    name: str = "git_find"
+    description: str = (
+        "Find files by name pattern within git-tracked files. This is useful for locating "
+        "specific files when you know part of the filename but not the exact path. Only searches "
+        "among git-tracked files, which helps avoid finding irrelevant files in build directories, "
+        "caches, etc."
+    )
+    args_schema: Type[BaseModel] = GitFindInput
+
+    def _run(
+        self,
+        name_pattern: str,
+        file_type: Optional[str] = None,
+        case_sensitive: bool = False,
+    ) -> str:
+        """Find files by name pattern in git-tracked files."""
+        try:
+            # Check if we're in a git repository
+            result = subprocess.run(
+                ["git", "rev-parse", "--is-inside-work-tree"],
+                capture_output=True,
+                text=True,
+            )
+
+            if result.returncode != 0:
+                return "Not a git repository. Use regular find tools for non-git directories."
+
+            # Get all git-tracked files
+            result = subprocess.run(["git", "ls-files"], capture_output=True, text=True)
+
+            if result.returncode != 0:
+                return f"Error listing git files: {result.stderr}"
+
+            all_files = (
+                result.stdout.strip().split("\n") if result.stdout.strip() else []
+            )
+
+            # Filter by name pattern
+            import fnmatch
+
+            pattern = name_pattern if case_sensitive else name_pattern.lower()
+
+            matching_files = []
+            for file_path in all_files:
+                filename = os.path.basename(file_path)
+                compare_name = filename if case_sensitive else filename.lower()
+
+                if fnmatch.fnmatch(compare_name, pattern):
+                    # Apply file type filter if specified
+                    if file_type == "f" and not os.path.isfile(file_path):
+                        continue
+                    elif file_type == "d" and not os.path.isdir(file_path):
+                        continue
+
+                    matching_files.append(file_path)
+
+            if not matching_files:
+                return f"No git-tracked files found matching pattern '{name_pattern}'"
+
+            # Format output
+            matching_files.sort()
+            lines = [
+                f"Found {len(matching_files)} git-tracked files matching '{name_pattern}':",
+                "",
+            ]
+
+            for file_path in matching_files:
+                lines.append(f"  {file_path}")
+
+            return "\n".join(lines)
+
+        except Exception as e:
+            return f"Error finding files: {e}"
+
+
 class ListUserModulesTool(BaseTool):
     """Tool for listing user-imported modules."""
 
@@ -574,7 +917,11 @@ def create_kernel_tools(kernel: KernelInterface) -> List[BaseTool]:
         GetNotebookStateTool(kernel),
         SearchNotebookTool(kernel),
         GetCellTool(kernel),
-        # Module inspection (new!)
+        # Git-native file operations
+        ListFilesTool(),
+        GitGrepTool(),
+        GitFindTool(),
+        # Module inspection
         ReadModuleSourceTool(),
         ReadSourceFromErrorTool(),
         ListUserModulesTool(),
