@@ -15,7 +15,7 @@ class AgentWidget(anywidget.AnyWidget):
     """AI-powered assistant widget with kernel access."""
 
     # Path to the compiled JavaScript bundle
-    _esm = str(pathlib.Path(__file__).parent.parent / "frontend" / "dist" / "index.js")
+    _esm = str(pathlib.Path(__file__).parent / "static" / "index.js")
 
     # Basic widget state synchronized between Python and JavaScript
     message = traitlets.Unicode("").tag(sync=True)

@@ -1,66 +1,50 @@
+[build-system]
+requires = ["hatchling", "hatch-vcs", "hatch-jupyter-builder>=0.5.0"]
+build-backend = "hatchling.build"
+
 [project]
-name = "assistant-ui-widget"
-version = "0.1.0"
-description = "Interactive chat widget using Assistant-UI and AnyWidget for Jupyter notebooks"
-readme = "README.md"
-license = {text = "MIT"}
-authors = [
-    {name = "Assistant UI Team", email = "assistant@example.com"}
+name = "assistant-ui-anywidget"
+description = "Interactive AI assistant widget with kernel access for Jupyter notebooks using anywidget"
+requires-python = ">=3.10"
+dynamic = ["version"]
+maintainers = [{ name = "Bas Nijholt", email = "bas@nijho.lt" }]
+license = { text = "MIT" }
+dependencies = [
+    "anywidget>=0.9.0",
+    "pydantic-settings>=2.10.1",
 ]
-maintainers = [
-    {name = "Assistant UI Team", email = "assistant@example.com"}
-]
-keywords = ["jupyter", "widget", "chat", "assistant", "ui", "react", "anywidget"]
 classifiers = [
-    "Development Status :: 3 - Alpha",
-    "Framework :: Jupyter",
-    "Framework :: Jupyter :: JupyterLab :: 3",
-    "Framework :: Jupyter :: JupyterLab :: 4",
+    "Development Status :: 4 - Beta",
     "Intended Audience :: Developers",
     "Intended Audience :: Science/Research",
     "License :: OSI Approved :: MIT License",
     "Operating System :: OS Independent",
+    "Programming Language :: Python",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Framework :: Jupyter",
+    "Framework :: Jupyter :: JupyterLab",
+    "Framework :: IPython",
     "Topic :: Scientific/Engineering",
     "Topic :: Software Development :: Libraries :: Python Modules",
-    "Topic :: Software Development :: User Interfaces",
+    "Topic :: Software Development :: Widget Sets",
     "Topic :: System :: Shells",
+    "Typing :: Typed",
 ]
-dependencies = [
-    "anywidget>=0.9.0",
-    "traitlets>=5.0.0",
-    "jupyter>=1.0.0",
-    "ipywidgets>=8.0.0",
-    "pydantic-settings>=2.10.1",
-]
+keywords = ["jupyter", "widget", "ai", "assistant", "chat", "kernel", "interactive", "anywidget"]
 
-requires-python = ">=3.10"
-
-[build-system]
-requires = ["hatchling"]
-build-backend = "hatchling.build"
-
-[tool.hatch.build]
-include = [
-    "assistant_ui_anywidget/**/*.py",
-    "frontend/dist/**/*"
-]
-
-[tool.hatch.metadata]
-allow-direct-references = true
-
-[tool.hatch.build.targets.wheel]
-packages = ["assistant_ui_anywidget"]
+[project.readme]
+content-type = "text/markdown"
+file = "README.md"
 
 [project.urls]
-Homepage = "https://github.com/your-org/assistant-ui-anywidget"
-Repository = "https://github.com/your-org/assistant-ui-anywidget.git"
-Documentation = "https://github.com/your-org/assistant-ui-anywidget#readme"
-Issues = "https://github.com/your-org/assistant-ui-anywidget/issues"
-Changelog = "https://github.com/your-org/assistant-ui-anywidget/releases"
+homepage = "https://github.com/basnijholt/assistant-ui-anywidget"
+documentation = "https://github.com/basnijholt/assistant-ui-anywidget"
+repository = "https://github.com/basnijholt/assistant-ui-anywidget"
+issues = "https://github.com/basnijholt/assistant-ui-anywidget/issues"
 
 [project.optional-dependencies]
 ai = [
@@ -75,34 +59,38 @@ ai = [
     "python-dotenv>=1.0.0",
     "pyyaml>=6.0",
 ]
-dev = [
-    "notebook>=7.3.3",
-    "pytest>=8.3.5",
-    "pytest-cov>=5.0.0",
-    "pre-commit>=3.0.0",
-    "ruff>=0.1.0",
-    "mypy>=1.0.0",
-]
-test = [
-    "pytest>=8.3.5",
-    "pytest-cov>=5.0.0",
-    "pytest-xdist>=3.0.0",
-]
-docs = [
-    "sphinx>=5.0.0",
-    "sphinx-rtd-theme>=1.0.0",
-    "myst-parser>=0.18.0",
-]
+dev = ["watchfiles", "jupyterlab", "pytest", "pytest-cov", "pre-commit", "ruff", "mypy"]
 
+# Dependency groups (recognized by `uv`). For more details, visit:
+# https://peps.python.org/pep-0735/
 [dependency-groups]
 dev = [
-    "coverage[toml]>=7.9.2",
-    "notebook>=7.3.3",
-    "numpy>=2.2.6",
-    "pandas>=2.3.1",
-    "pytest>=8.3.5",
-    "pytest-cov>=5.0.0",
+    "watchfiles",
+    "jupyterlab",
+    "hatch-vcs",
+    "hatch-jupyter-builder",
 ]
+
+[tool.hatch.version]
+source = "vcs"
+
+[tool.hatch.metadata]
+allow-direct-references = true
+
+[tool.hatch.build]
+artifacts = ["assistant_ui_anywidget/static/*"]
+
+[tool.hatch.build.hooks.jupyter-builder]
+build-function = "hatch_jupyter_builder.npm_builder"
+ensured-targets = ["assistant_ui_anywidget/static/index.js"]
+skip-if-exists = ["assistant_ui_anywidget/static/index.js"]
+dependencies = ["hatch-jupyter-builder>=0.5.0"]
+
+[tool.hatch.build.hooks.jupyter-builder.build-kwargs]
+npm = "npm"
+build_cmd = "build"
+path = "frontend"
+build_dir = "assistant_ui_anywidget/static"
 
 [tool.pytest.ini_options]
 minversion = "8.0"

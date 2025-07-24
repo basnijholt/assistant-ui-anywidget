@@ -121,5 +121,9 @@ frontend/dist/*
 
 frontend/screenshots/*
 
+# Build artifacts
+assistant_ui_anywidget/static/*
+!assistant_ui_anywidget/static/.gitkeep
+
 # AI conversation logs
 ai_conversation_logs/
