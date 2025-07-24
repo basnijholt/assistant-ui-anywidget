@@ -273,14 +273,11 @@ def get_system_prompt(require_approval: bool = True) -> str:
     return config.get_full_prompt(require_approval=require_approval)
 
 
-def create_call_model(
-    llm: BaseChatModel, tools: List[Any], require_approval: bool
-) -> Any:
+def create_call_model(llm: BaseChatModel, tools: List[Any]) -> Any:
     """Create the call_model function for the agent graph."""
 
     def call_model(state: AgentState) -> Dict[str, Any]:
         """Call the LLM with tools (synchronous version)."""
-        # System prompt is always added in chat() method, so state.messages should contain it
         response = llm.bind_tools(tools).invoke(state.messages)
         return {"messages": [response]}
 
@@ -300,7 +297,7 @@ def create_agent_graph(
     tools = create_kernel_tools(kernel)
 
     # Create call_model function
-    call_model = create_call_model(llm, tools, require_approval)
+    call_model = create_call_model(llm, tools)
 
     # Add nodes
     graph.add_node("agent", call_model)
