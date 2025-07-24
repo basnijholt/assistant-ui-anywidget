@@ -280,14 +280,8 @@ def create_call_model(
 
     def call_model(state: AgentState) -> Dict[str, Any]:
         """Call the LLM with tools (synchronous version)."""
-        # Create a copy to avoid mutating the original state
-        messages = list(state.messages)
-
-        # Add system message if not present
-        if not messages or not isinstance(messages[0], SystemMessage):
-            system_msg = SystemMessage(content=get_system_prompt(require_approval))
-            messages = [system_msg] + messages
-        response = llm.bind_tools(tools).invoke(messages)
+        # System prompt is always added in chat() method, so state.messages should contain it
+        response = llm.bind_tools(tools).invoke(state.messages)
         return {"messages": [response]}
 
     return call_model
