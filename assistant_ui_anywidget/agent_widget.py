@@ -6,7 +6,7 @@ from typing import Any, Dict, List, Optional
 import anywidget
 import traitlets
 
-from .kernel_interface import KernelInterface, KernelContext, AIConfig
+from .kernel_interface import KernelInterface, KernelContext, AIConfig, ExecutionResult
 from .simple_handlers import SimpleHandlers
 from .ai import LangGraphAIService
 
@@ -251,22 +251,14 @@ class AgentWidget(anywidget.AnyWidget):
 
         lines = [f"**Executed:**\n```python\n{code}\n```\n"]
 
-        # Track output for code history
-        output_text = None
-
         if result.success:
             lines.append("✅ **Success**")
 
             if result.outputs:
                 lines.append("\n**Output:**")
-                output_parts = []
                 for output in result.outputs:
                     if output["type"] == "execute_result":
-                        output_text = output["data"]["text/plain"]
-                        output_parts.append(output_text)
-                        lines.append(f"```\n{output_text}\n```")
-                if output_parts:
-                    output_text = "\n".join(output_parts)
+                        lines.append(f"```\n{output['data']['text/plain']}\n```")
 
             if result.variables_changed:
                 lines.append(
@@ -275,8 +267,6 @@ class AgentWidget(anywidget.AnyWidget):
         else:
             lines.append("❌ **Error**")
             if result.error:
-                error_msg = f"{result.error['type']}: {result.error['message']}"
-                output_text = f"Error: {error_msg}"
                 lines.append(f"\n**{result.error['type']}:** {result.error['message']}")
                 if result.error.get("traceback"):
                     lines.append("\n**Traceback:**")
@@ -284,12 +274,12 @@ class AgentWidget(anywidget.AnyWidget):
                     lines.extend(result.error["traceback"][:5])  # Limit traceback lines
                     lines.append("```")
 
-        # Add to code history
+        # Add to code history using the helper method
         self.add_code_to_history(
             code=code,
             execution_count=result.execution_count,
             success=result.success,
-            output=output_text,
+            output=self._extract_output_from_result(result),
         )
 
         # Update state after execution
@@ -508,24 +498,12 @@ for var in list(globals().keys()):
         """Programmatically execute code."""
         result = self.kernel.execute_code(code)
 
-        # Track output for code history
-        output_text = None
-        if result.success and result.outputs:
-            output_parts = []
-            for output in result.outputs:
-                if output["type"] == "execute_result":
-                    output_parts.append(output["data"]["text/plain"])
-            if output_parts:
-                output_text = "\n".join(output_parts)
-        elif not result.success and result.error:
-            output_text = f"Error: {result.error['type']}: {result.error['message']}"
-
-        # Add to code history
+        # Add to code history using the helper method
         self.add_code_to_history(
             code=code,
             execution_count=result.execution_count,
             success=result.success,
-            output=output_text,
+            output=self._extract_output_from_result(result),
         )
 
         if show_result:
@@ -629,24 +607,25 @@ for var in list(globals().keys()):
             return str(log_path) if log_path else None
         return None
 
-    def _on_code_executed(self, code: str, result: Any) -> None:
-        """Callback for when code is executed through the kernel interface."""
-        # Extract output text from the result
-        output_text = None
+    def _extract_output_from_result(self, result: ExecutionResult) -> Optional[str]:
+        """Extract output text from an ExecutionResult."""
         if result.success and result.outputs:
             output_parts = []
             for output in result.outputs:
                 if output["type"] == "execute_result":
                     output_parts.append(output["data"]["text/plain"])
             if output_parts:
-                output_text = "\n".join(output_parts)
+                return "\n".join(output_parts)
         elif not result.success and result.error:
-            output_text = f"Error: {result.error['type']}: {result.error['message']}"
+            return f"Error: {result.error['type']}: {result.error['message']}"
+        return None
 
+    def _on_code_executed(self, code: str, result: ExecutionResult) -> None:
+        """Callback for when code is executed through the kernel interface."""
         # Add to code history
         self.add_code_to_history(
             code=code,
             execution_count=result.execution_count,
             success=result.success,
-            output=output_text,
+            output=self._extract_output_from_result(result),
         )
