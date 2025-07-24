@@ -28,6 +28,9 @@ class AgentWidget(anywidget.AnyWidget):
     variables_info: traitlets.List = traitlets.List([]).tag(sync=True)
     debug_info = traitlets.Dict({}).tag(sync=True)
 
+    # Code execution history
+    code_history: traitlets.List = traitlets.List([]).tag(sync=True)
+
     # AI assistant configuration
     ai_config = traitlets.Dict(
         {
@@ -245,14 +248,22 @@ class AgentWidget(anywidget.AnyWidget):
 
         lines = [f"**Executed:**\n```python\n{code}\n```\n"]
 
+        # Track output for code history
+        output_text = None
+
         if result.success:
             lines.append("✅ **Success**")
 
             if result.outputs:
                 lines.append("\n**Output:**")
+                output_parts = []
                 for output in result.outputs:
                     if output["type"] == "execute_result":
-                        lines.append(f"```\n{output['data']['text/plain']}\n```")
+                        output_text = output["data"]["text/plain"]
+                        output_parts.append(output_text)
+                        lines.append(f"```\n{output_text}\n```")
+                if output_parts:
+                    output_text = "\n".join(output_parts)
 
             if result.variables_changed:
                 lines.append(
@@ -261,12 +272,22 @@ class AgentWidget(anywidget.AnyWidget):
         else:
             lines.append("❌ **Error**")
             if result.error:
+                error_msg = f"{result.error['type']}: {result.error['message']}"
+                output_text = f"Error: {error_msg}"
                 lines.append(f"\n**{result.error['type']}:** {result.error['message']}")
                 if result.error.get("traceback"):
                     lines.append("\n**Traceback:**")
                     lines.append("```")
                     lines.extend(result.error["traceback"][:5])  # Limit traceback lines
                     lines.append("```")
+
+        # Add to code history
+        self.add_code_to_history(
+            code=code,
+            execution_count=result.execution_count,
+            success=result.success,
+            output=output_text,
+        )
 
         # Update state after execution
         self._update_kernel_state()
@@ -320,6 +341,16 @@ for var in list(globals().keys()):
         del globals()[var]
 """
             result = self.kernel.execute_code(code)
+
+            # Add to code history
+            self.add_code_to_history(
+                code=code,
+                execution_count=result.execution_count,
+                success=result.success,
+                output="Namespace cleared"
+                if result.success
+                else "Failed to clear namespace",
+            )
 
             if result.success:
                 self.add_message("system", "✅ Namespace cleared successfully.")
@@ -440,6 +471,31 @@ for var in list(globals().keys()):
         """Clear all action buttons."""
         self.action_buttons = []
 
+    def add_code_to_history(
+        self,
+        code: str,
+        execution_count: int,
+        success: bool = True,
+        output: Optional[str] = None,
+    ) -> None:
+        """Add executed code to the history."""
+        import time
+
+        new_history = list(self.code_history)
+        new_history.append(
+            {
+                "code": code,
+                "execution_count": execution_count,
+                "timestamp": time.time(),
+                "success": success,
+                "output": output,
+            }
+        )
+        # Keep only the last 50 code executions
+        if len(new_history) > 50:
+            new_history = new_history[-50:]
+        self.code_history = new_history
+
     def inspect_variable(self, var_name: str) -> Optional[Dict[str, Any]]:
         """Programmatically inspect a variable."""
         var_info = self.kernel.get_variable_info(var_name, deep=True)
@@ -448,6 +504,26 @@ for var in list(globals().keys()):
     def execute_code(self, code: str, show_result: bool = True) -> Dict[str, Any]:
         """Programmatically execute code."""
         result = self.kernel.execute_code(code)
+
+        # Track output for code history
+        output_text = None
+        if result.success and result.outputs:
+            output_parts = []
+            for output in result.outputs:
+                if output["type"] == "execute_result":
+                    output_parts.append(output["data"]["text/plain"])
+            if output_parts:
+                output_text = "\n".join(output_parts)
+        elif not result.success and result.error:
+            output_text = f"Error: {result.error['type']}: {result.error['message']}"
+
+        # Add to code history
+        self.add_code_to_history(
+            code=code,
+            execution_count=result.execution_count,
+            success=result.success,
+            output=output_text,
+        )
 
         if show_result:
             # Add execution to chat history
