@@ -8,7 +8,7 @@ export default defineConfig({
     react(),
     visualizer({
       filename: "dist/stats.html",
-      open: true,
+      open: false, // Don't automatically open the stats page
       gzipSize: true,
       brotliSize: true,
     }),
@@ -31,6 +31,9 @@ export default defineConfig({
         manualChunks: undefined, // Keep everything in a single bundle
       },
     },
+    // Output directly to the static directory
+    outDir: "../assistant_ui_anywidget/static",
+    emptyOutDir: false, // Don't delete existing files in static
     // Optimize build
     minify: "terser",
     sourcemap: false,

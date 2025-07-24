@@ -29,6 +29,17 @@ const styles = `
     }
   }
 
+  @keyframes pulse {
+    0%, 60%, 100% {
+      transform: scale(1);
+      opacity: 1;
+    }
+    80% {
+      transform: scale(1.2);
+      opacity: 0.5;
+    }
+  }
+
   .message-enter {
     animation: fadeIn 0.3s ease-out;
   }
@@ -81,6 +92,7 @@ export function ChatWidget() {
   const [chatHistory] = useModelState("chat_history");
   const [actionButtons] = useModelState<ActionButton[]>("action_buttons");
   const [codeHistory] = useModelState("code_history");
+  const [isLoading] = useModelState<boolean>("is_loading");
   const [activeTab, setActiveTab] = useState<"chat" | "code">("chat");
   const model = useModel();
   const [copiedIndex, setCopiedIndex] = useState<number | null>(null);
@@ -358,6 +370,67 @@ export function ChatWidget() {
                     </div>
                   </div>
                 ))
+              )}
+              {isLoading && (
+                <div
+                  className="message-enter"
+                  style={{
+                    marginBottom: "16px",
+                    display: "flex",
+                    justifyContent: "flex-start",
+                  }}
+                >
+                  <div
+                    style={{
+                      maxWidth: "75%",
+                      padding: "12px 16px",
+                      backgroundColor: "#f0f0f0",
+                      borderRadius: "18px",
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "8px",
+                    }}
+                  >
+                    <div
+                      style={{
+                        display: "flex",
+                        gap: "4px",
+                      }}
+                    >
+                      <div
+                        style={{
+                          width: "8px",
+                          height: "8px",
+                          backgroundColor: "#666",
+                          borderRadius: "50%",
+                          animation: "pulse 1.4s infinite ease-in-out",
+                          animationDelay: "0s",
+                        }}
+                      />
+                      <div
+                        style={{
+                          width: "8px",
+                          height: "8px",
+                          backgroundColor: "#666",
+                          borderRadius: "50%",
+                          animation: "pulse 1.4s infinite ease-in-out",
+                          animationDelay: "0.2s",
+                        }}
+                      />
+                      <div
+                        style={{
+                          width: "8px",
+                          height: "8px",
+                          backgroundColor: "#666",
+                          borderRadius: "50%",
+                          animation: "pulse 1.4s infinite ease-in-out",
+                          animationDelay: "0.4s",
+                        }}
+                      />
+                    </div>
+                    <span style={{ color: "#666", fontSize: "14px" }}>AI is thinking...</span>
+                  </div>
+                </div>
               )}
               <div ref={messagesEndRef} />
             </div>

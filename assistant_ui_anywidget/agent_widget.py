@@ -15,7 +15,7 @@ class AgentWidget(anywidget.AnyWidget):
     """AI-powered assistant widget with kernel access."""
 
     # Path to the compiled JavaScript bundle
-    _esm = str(pathlib.Path(__file__).parent / "static" / "index.js")
+    _esm = pathlib.Path(__file__).parent / "static" / "index.js"
 
     # Basic widget state synchronized between Python and JavaScript
     message = traitlets.Unicode("").tag(sync=True)
@@ -30,6 +30,9 @@ class AgentWidget(anywidget.AnyWidget):
 
     # Code execution history
     code_history: traitlets.List = traitlets.List([]).tag(sync=True)
+
+    # Loading state
+    is_loading = traitlets.Bool(False).tag(sync=True)
 
     # AI assistant configuration
     ai_config = traitlets.Dict(
@@ -135,11 +138,14 @@ class AgentWidget(anywidget.AnyWidget):
 
         # Only generate responses if AI service is available
         if self.ai_service:
+            # Set loading state
+            self.is_loading = True
             # Check if this is a command or regular message
             if user_text.startswith("/"):
                 # Handle commands
                 response = self._handle_command(user_text)
                 self.add_message("assistant", response)
+                self.is_loading = False
             else:
                 # Get kernel context for AI
                 context = self._get_kernel_context()
@@ -178,6 +184,9 @@ class AgentWidget(anywidget.AnyWidget):
                     )
                 else:
                     self.add_message("assistant", result.content)
+
+                # Clear loading state
+                self.is_loading = False
 
     def _handle_command(self, command: str) -> str:
         """Handle slash commands."""
@@ -360,6 +369,9 @@ for var in list(globals().keys()):
 
     def _handle_approval(self, approved: bool) -> None:
         """Handle approval/denial of code execution."""
+        # Set loading state
+        self.is_loading = True
+
         # Find the last approval request in history
         thread_id = None
         for msg in reversed(self.chat_history):
@@ -370,6 +382,7 @@ for var in list(globals().keys()):
         if not thread_id or not self.ai_service:
             self.add_message("system", "❌ No pending approval request found.")
             self.clear_action_buttons()
+            self.is_loading = False
             return
 
         # Send approval decision to LangGraph
@@ -390,6 +403,9 @@ for var in list(globals().keys()):
 
         # Clear action buttons
         self.clear_action_buttons()
+
+        # Clear loading state
+        self.is_loading = False
 
         # Update state after potential code execution
         if approved:

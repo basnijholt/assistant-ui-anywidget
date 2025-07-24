@@ -117,8 +117,6 @@ venv.bak/
 
 src/graphviz_anywidget/static/
 
-frontend/dist/*
-
 frontend/screenshots/*
 
 # Build artifacts
