@@ -24,6 +24,7 @@ from langgraph.types import interrupt
 from pydantic import BaseModel, ConfigDict, Field
 
 from ..kernel_interface import KernelContext, KernelInterface
+from ..kernel_tools import create_kernel_tools
 from .logger import ConversationLogger
 
 # Load environment variables
@@ -187,93 +188,6 @@ def approval_node(state: AgentState) -> Dict[str, Any]:
 
     # Approved - continue to tools
     return {"pending_approval": False}
-
-
-def create_kernel_tools(kernel: KernelInterface) -> List[Any]:
-    """Create kernel tools."""
-    from langchain.tools import tool
-
-    @tool  # type: ignore[misc]
-    def get_variables() -> str:
-        """List all variables in the kernel namespace."""
-        if not kernel.is_available:
-            return "Kernel not available"
-
-        namespace = kernel.get_namespace()
-        if not namespace:
-            return "No variables in namespace"
-
-        vars_by_type: Dict[str, List[str]] = {}
-        for name, value in namespace.items():
-            if name.startswith("_"):
-                continue
-            type_name = type(value).__name__
-            if type_name not in vars_by_type:
-                vars_by_type[type_name] = []
-            vars_by_type[type_name].append(name)
-
-        lines = [f"Variables ({len(namespace)} total):"]
-        for type_name in sorted(vars_by_type.keys()):
-            var_names = sorted(vars_by_type[type_name])
-            lines.append(f"{type_name}: {', '.join(var_names[:10])}")
-            if len(var_names) > 10:
-                lines[-1] += f" ... and {len(var_names) - 10} more"
-
-        return "\n".join(lines)
-
-    @tool  # type: ignore[misc]
-    def inspect_variable(variable_name: str) -> str:
-        """Inspect a specific variable."""
-        if not kernel.is_available:
-            return "Kernel not available"
-
-        var_info = kernel.get_variable_info(variable_name)
-        if not var_info:
-            return f"Variable '{variable_name}' not found"
-
-        return (
-            f"Variable: {var_info.name}\n"
-            f"Type: {var_info.type_str}\n"
-            f"Preview: {var_info.preview}"
-        )
-
-    @tool  # type: ignore[misc]
-    def execute_code(code: str) -> str:
-        """Execute Python code in the kernel. REQUIRES APPROVAL."""
-        if not kernel.is_available:
-            return "Kernel not available"
-
-        result = kernel.execute_code(code)
-
-        if result.success:
-            output_parts = ["Code executed successfully."]
-            if result.outputs:
-                for output in result.outputs:
-                    if output["type"] == "execute_result":
-                        output_parts.append(f"Result: {output['data']['text/plain']}")
-                    elif output["type"] == "stream":
-                        output_parts.append(f"Output: {output['text']}")
-            return "\n".join(output_parts)
-        else:
-            error_msg = "Code execution failed."
-            if result.error:
-                error_msg += f"\nError: {result.error['message']}"
-            return error_msg
-
-    @tool  # type: ignore[misc]
-    def kernel_info() -> str:
-        """Get kernel information."""
-        info = kernel.get_kernel_info()
-        return (
-            f"Kernel Status: {'Available' if info['available'] else 'Not Available'}\n"
-            f"Execution Count: {info['execution_count']}\n"
-            f"Variables: {info.get('namespace_size', 0)}"
-        )
-
-    # Use the comprehensive tool set from kernel_tools.py instead
-    from ..kernel_tools import create_kernel_tools as create_comprehensive_tools
-
-    return create_comprehensive_tools(kernel)
 
 
 def build_context_message(context: KernelContext) -> str:
