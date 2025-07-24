@@ -4,8 +4,10 @@ import logging
 import os
 import uuid
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Annotated, Any, Dict, List, Optional
 
+import yaml
 from dotenv import load_dotenv
 from langchain.chat_models import init_chat_model
 from langchain_core.language_models import BaseChatModel
@@ -224,31 +226,21 @@ def build_context_message(context: KernelContext) -> str:
 
 
 def get_system_prompt(require_approval: bool = True) -> str:
-    """Get system prompt."""
-    approval_note = (
-        "\n\nIMPORTANT: The execute_code tool requires user approval. "
-        "Other tools (get_variables, inspect_variable, kernel_info) execute automatically."
-        if require_approval
-        else ""
-    )
+    """Get the detailed system prompt for the AI assistant by reading from a YAML file."""
+    prompt_path = Path(__file__).parent / "system_prompt.yaml"
+    with open(prompt_path, "r") as f:
+        prompt_data = yaml.safe_load(f)
 
-    return f"""You are an AI assistant with access to a Jupyter kernel and notebook history.
+    main_prompt = prompt_data["main_prompt"]
+    slash_commands = prompt_data["slash_commands"]
+    approval_note = prompt_data["approval_note"] if require_approval else ""
 
-You can:
-- List variables with get_variables()
-- Inspect specific variables with inspect_variable(name)
-- Execute Python code with execute_code(code)
-- Check kernel status with kernel_info()
+    # Combine the parts into the final prompt
+    full_prompt = f"{main_prompt}\n\n{slash_commands}"
+    if approval_note:
+        full_prompt += f"\n\n{approval_note}"
 
-NOTEBOOK ACCESS: You have access to recent notebook cell contents and outputs in your context.
-When users ask about "cell contents", "what code did I run", "notebook cells", or similar,
-refer to the RECENT NOTEBOOK CELLS section in your context which shows the actual code
-that was executed in previous cells.
-
-When users ask you to run or execute code, use execute_code().
-When they ask about variables, use get_variables() or inspect_variable().
-When they ask about notebook cells or previous code, refer to your context.
-Be helpful and explain what you're doing.{approval_note}"""
+    return full_prompt
 
 
 def create_call_model(
@@ -276,9 +268,9 @@ def create_agent_graph(
     llm: BaseChatModel,
     memory: MemorySaver,
     require_approval: bool,
-) -> StateGraph:
+) -> Any:  # Using Any to bypass CompiledStateGraph type issues for now
     """Create the LangGraph agent with approval flow."""
-    graph = StateGraph(AgentState)
+    graph: StateGraph[AgentState] = StateGraph(AgentState)
 
     # Create tools
     tools = create_kernel_tools(kernel)
@@ -395,7 +387,7 @@ class LangGraphAIService:
 
             # Invoke the agent
             config = {"configurable": {"thread_id": thread_id}}
-            response = self.agent.invoke(payload, config)
+            response: Dict[str, Any] = self.agent.invoke(payload, config)
 
             # Check if interrupted for approval
             if "__interrupt__" in response:
@@ -418,9 +410,18 @@ class LangGraphAIService:
                 )
 
             # Extract response
-            last_message = response["messages"][-1]
+            messages = response.get("messages", [])
+            if not messages:
+                return ChatResult(
+                    content="No response from AI.",
+                    thread_id=thread_id,
+                    success=False,
+                    error="Empty message list in response.",
+                )
+
+            last_message: AnyMessage = messages[-1]
             content = "No content"
-            tool_calls = []
+            tool_calls: List[Dict[str, Any]] = []
 
             if isinstance(last_message, AIMessage):
                 # Handle cases where content might be a list

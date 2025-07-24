@@ -72,6 +72,7 @@ ai = [
     "langgraph>=0.0.20",
     "openai>=1.0.0",
     "python-dotenv>=1.0.0",
+    "pyyaml>=6.0",
 ]
 dev = [
     "notebook>=7.3.3",

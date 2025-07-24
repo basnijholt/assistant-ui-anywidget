@@ -25,6 +25,7 @@ repos:
           - types-setuptools
           - pandas-stubs
           - types-psutil
+          - types-PyYAML
   - repo: https://github.com/kynan/nbstripout
     rev: 0.8.1
     hooks:
