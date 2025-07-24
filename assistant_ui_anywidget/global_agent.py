@@ -180,9 +180,7 @@ def get_agent_info() -> Dict[str, Any]:
     try:
         return {
             "exists": True,
-            "ai_provider": getattr(_global_agent.ai_service.llm, "_llm_type", "unknown")
-            if _global_agent.ai_service
-            else "none",
+            "ai_provider": "pydantic_ai" if _global_agent.ai_service else "none",
             "kernel_available": _global_agent.kernel.is_available,
             "chat_history_length": len(_global_agent.chat_history),
             "namespace_size": _global_agent.kernel_state.get("namespace_size", 0),

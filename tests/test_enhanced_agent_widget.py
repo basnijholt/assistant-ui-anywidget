@@ -225,8 +225,8 @@ class TestAgentWidget:
         assert widget.chat_history[0]["role"] == "user"
         assert widget.chat_history[0]["content"] == "Hello"
         assert widget.chat_history[1]["role"] == "assistant"
-        # Mock AI returns specific greeting response
-        assert "mock AI assistant" in widget.chat_history[1]["content"]
+        # Pydantic AI test model returns specific response
+        assert "success" in widget.chat_history[1]["content"]
 
         # Clear history for next test
         widget.clear_chat_history()

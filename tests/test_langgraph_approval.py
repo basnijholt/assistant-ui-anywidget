@@ -4,19 +4,19 @@ import os
 from unittest.mock import MagicMock, patch
 
 
-from assistant_ui_anywidget.ai.langgraph_service import LangGraphAIService, ChatResult
+from assistant_ui_anywidget.ai.pydantic_ai_service import PydanticAIService, ChatResult
 from assistant_ui_anywidget.kernel_interface import KernelInterface
 
 
-class TestLangGraphApproval:
-    """Test LangGraph approval workflow functionality."""
+class TestPydanticAIApproval:
+    """Test Pydantic AI approval workflow functionality."""
 
-    def test_langgraph_service_creation(self) -> None:
-        """Test that LangGraph service can be created."""
+    def test_pydantic_ai_service_creation(self) -> None:
+        """Test that Pydantic AI service can be created."""
         mock_kernel = MagicMock(spec=KernelInterface)
         mock_kernel.is_available = True
 
-        service = LangGraphAIService(kernel=mock_kernel, require_approval=True)
+        service = PydanticAIService(kernel=mock_kernel, require_approval=True)
 
         assert service is not None
         assert service.require_approval is True
@@ -34,7 +34,7 @@ class TestLangGraphApproval:
         }
 
         with patch.dict(os.environ, {}, clear=True):
-            service = LangGraphAIService(kernel=mock_kernel, require_approval=True)
+            service = PydanticAIService(kernel=mock_kernel, require_approval=True)
 
             # Test get_variables - should work without approval
             result = service.chat("Show me all variables")
@@ -48,7 +48,7 @@ class TestLangGraphApproval:
         mock_kernel.is_available = True
 
         with patch.dict(os.environ, {}, clear=True):
-            service = LangGraphAIService(kernel=mock_kernel, require_approval=True)
+            service = PydanticAIService(kernel=mock_kernel, require_approval=True)
 
             # Test execute_code - should interrupt for approval
             result = service.chat("Execute x = 42")
@@ -63,7 +63,7 @@ class TestLangGraphApproval:
         mock_kernel.is_available = True
 
         with patch.dict(os.environ, {}, clear=True):
-            service = LangGraphAIService(kernel=mock_kernel, require_approval=False)
+            service = PydanticAIService(kernel=mock_kernel, require_approval=False)
 
             assert service.require_approval is False
 
@@ -100,7 +100,7 @@ class TestLangGraphApproval:
         )
 
         assert widget.ai_service is not None
-        assert isinstance(widget.ai_service, LangGraphAIService)
+        assert isinstance(widget.ai_service, PydanticAIService)
 
         # Create widget with LangGraph service (approval disabled)
         simple_widget = AgentWidget(
@@ -111,4 +111,4 @@ class TestLangGraphApproval:
         )
 
         assert simple_widget.ai_service is not None
-        assert isinstance(simple_widget.ai_service, LangGraphAIService)
+        assert isinstance(simple_widget.ai_service, PydanticAIService)

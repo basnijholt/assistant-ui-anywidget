@@ -1,14 +1,14 @@
 """AI integration module for the assistant widget."""
 
-from .langgraph_service import LangGraphAIService, ChatResult
+from .pydantic_ai_service import PydanticAIService, ChatResult
 from .logger import ConversationLogger
 
-# Use LangGraph as the only AI service
-AIService = LangGraphAIService
+# Use Pydantic AI as the default AI service
+AIService = PydanticAIService
 
 __all__ = [
     "AIService",
-    "LangGraphAIService",
+    "PydanticAIService",
     "ChatResult",
     "ConversationLogger",
 ]

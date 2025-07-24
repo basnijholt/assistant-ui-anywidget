@@ -33,7 +33,7 @@ def test_ai_integration() -> None:
 
     print(f"✓ AI service initialized: {widget.ai_service is not None}")
     print(
-        f"✓ AI provider: {widget.ai_service.llm._llm_type if widget.ai_service and hasattr(widget.ai_service.llm, '_llm_type') else 'unknown'}"
+        f"✓ AI provider: {type(widget.ai_service.agent) if widget.ai_service and hasattr(widget.ai_service, 'agent') else 'unknown'}"
     )
 
     # Check logging

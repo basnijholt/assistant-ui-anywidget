@@ -1,5 +1,7 @@
 """AI service using Pydantic AI with LangGraph orchestration."""
 
+import asyncio
+import concurrent.futures
 import logging
 import os
 import uuid
@@ -15,7 +17,7 @@ from langchain_core.messages import (
 from langgraph.checkpoint.memory import MemorySaver
 from langgraph.graph import END
 from langgraph.types import interrupt
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 from pydantic_ai import Agent, RunContext
 
 from ..kernel_interface import KernelContext, KernelInterface
@@ -25,6 +27,30 @@ from .logger import ConversationLogger
 load_dotenv()
 
 logger = logging.getLogger(__name__)
+
+
+def _run_async_safely(coro: Any, timeout: int = 30) -> Any:
+    try:
+        # Try to get running loop (will raise RuntimeError if none)
+        asyncio.get_running_loop()
+
+        # We're in a loop (Jupyter), use thread pool executor
+        with concurrent.futures.ThreadPoolExecutor() as executor:
+            future = executor.submit(_run_in_new_loop, coro)
+            return future.result(timeout=timeout)
+
+    except RuntimeError:
+        # No running loop, use asyncio.run directly
+        return asyncio.run(coro)
+
+
+def _run_in_new_loop(coro: Any) -> Any:
+    loop = asyncio.new_event_loop()
+    try:
+        asyncio.set_event_loop(loop)
+        return loop.run_until_complete(coro)
+    finally:
+        loop.close()
 
 
 class AgentState(BaseModel):
@@ -45,8 +71,7 @@ class AgentState(BaseModel):
     # Error tracking
     last_error: Optional[str] = None
 
-    class Config:
-        arbitrary_types_allowed = True
+    model_config = ConfigDict(arbitrary_types_allowed=True)
 
 
 @dataclass
@@ -67,9 +92,7 @@ class ChatResult:
 
 
 # Define Pydantic AI tools for kernel interaction
-def create_pydantic_kernel_tools(kernel: KernelInterface):
-    """Create Pydantic AI tools for kernel interaction."""
-
+def create_pydantic_kernel_tools(kernel: KernelInterface) -> Dict[str, Any]:
     async def get_variables(ctx: RunContext[Any]) -> str:
         """List all variables in the kernel namespace."""
         if not kernel.is_available:
@@ -154,59 +177,76 @@ def create_pydantic_kernel_tools(kernel: KernelInterface):
     }
 
 
+def _detect_available_provider() -> tuple[str, str]:
+    providers = [
+        ("openai", "gpt-4o-mini", "OPENAI_API_KEY"),
+        ("anthropic", "claude-3-haiku-20240307", "ANTHROPIC_API_KEY"),
+        ("gemini", "gemini-1.5-flash", "GOOGLE_API_KEY"),
+    ]
+
+    for prov, default_model, env_var in providers:
+        if os.getenv(env_var):
+            return prov, default_model
+
+    logger.warning("No AI provider available")
+    return "test", "test"
+
+
+def _format_model_string(provider: str, model: str) -> str:
+    # Handle provider name mapping
+    if provider == "google_genai":
+        provider = "gemini"
+
+    # Gemini models don't use provider prefix in Pydantic AI
+    if provider == "gemini":
+        return model if model.startswith("gemini-") else f"gemini-{model}"
+    elif provider == "test":
+        return "test"
+    else:
+        return f"{provider}:{model}"
+
+
+def _is_model_compatible(provider: str, model: str) -> bool:
+    compatibility_map = {
+        "openai": lambda m: m.startswith(("gpt-", "o1-")),
+        "anthropic": lambda m: m.startswith("claude-"),
+        "gemini": lambda m: m.startswith("gemini-"),
+        "google_genai": lambda m: m.startswith("gemini-"),
+    }
+
+    check_func = compatibility_map.get(provider)
+    return check_func(model) if check_func else False
+
+
 def init_pydantic_ai_model(
     model: Optional[str] = None,
     provider: Optional[str] = None,
     **kwargs: Any,
 ) -> str:
-    """Initialize Pydantic AI model string with provider detection."""
+    """Initialize Pydantic AI model string with provider detection.
+
+    Args:
+        model: Specific model name (optional)
+        provider: Provider name or "auto" for auto-detection (optional)
+        **kwargs: Additional arguments (ignored)
+
+    Returns:
+        Properly formatted model string for Pydantic AI
+    """
     # Auto-detect if provider is None or "auto"
     if not provider or provider == "auto":
-        providers = [
-            ("openai", "gpt-4o-mini", "OPENAI_API_KEY"),
-            ("anthropic", "claude-3-haiku-20240307", "ANTHROPIC_API_KEY"),
-            ("gemini", "gemini-1.5-flash", "GOOGLE_API_KEY"),
-        ]
+        detected_provider, default_model = _detect_available_provider()
 
-        for prov, default_model, env_var in providers:
-            if os.getenv(env_var):
-                # For auto-detection, use the provider's default model unless
-                # the provided model is compatible with this provider
-                if model:
-                    # Check if the provided model is compatible with this provider
-                    if prov == "openai" and model.startswith(("gpt-", "o1-")):
-                        use_model = model
-                    elif prov == "anthropic" and model.startswith("claude-"):
-                        use_model = model
-                    elif prov == "gemini" and model.startswith("gemini-"):
-                        use_model = model
-                    else:
-                        # Model not compatible, use provider default
-                        use_model = default_model
-                else:
-                    use_model = default_model
+        if model and _is_model_compatible(detected_provider, model):
+            use_model = model
+        else:
+            use_model = default_model
 
-                # Return Pydantic AI model string format
-                if prov == "gemini":
-                    return use_model  # Gemini models don't need provider prefix
-                else:
-                    return f"{prov}:{use_model}"
-
-        # Fallback - this will be handled by the calling code
-        logger.warning("No AI provider available")
-        return "test"  # Pydantic AI test model
+        return _format_model_string(detected_provider, use_model)
 
     # Use explicit provider/model
     use_model = model or "gpt-4o-mini"
-
-    # Map provider names to Pydantic AI format
-    if provider == "google_genai":
-        # Gemini models don't use provider prefix in Pydantic AI
-        return use_model if use_model.startswith("gemini-") else f"gemini-{use_model}"
-    elif provider:
-        return f"{provider}:{use_model}"
-    else:
-        return use_model
+    return _format_model_string(provider, use_model)
 
 
 def build_context_message(context: KernelContext) -> str:
@@ -462,12 +502,12 @@ class PydanticAIService:
             self.conversation_logger.log_conversation(
                 thread_id=thread_id,
                 user_message=str(message),
-                ai_response=result.data,
+                ai_response=result.output,
                 context=context.to_dict() if context else None,
             )
 
             return ChatResult(
-                content=result.data,
+                content=result.output,
                 thread_id=thread_id,
                 success=True,
                 interrupted=needs_approval,
@@ -500,12 +540,14 @@ class PydanticAIService:
         context: Optional[KernelContext] = None,
     ) -> ChatResult:
         """Send message and get response (synchronous wrapper)."""
-        import asyncio
-
         try:
-            # Get the current event loop
-            loop = asyncio.get_event_loop()
-            return loop.run_until_complete(self.chat_async(message, thread_id, context))
-        except RuntimeError:
-            # No event loop running, create a new one
-            return asyncio.run(self.chat_async(message, thread_id, context))
+            result = _run_async_safely(self.chat_async(message, thread_id, context))
+            return result  # type: ignore[no-any-return]
+        except Exception as e:
+            logger.error(f"Error in chat: {e}")
+            return ChatResult(
+                content=f"Error: {str(e)}",
+                thread_id=thread_id or str(uuid.uuid4()),
+                success=False,
+                error=str(e),
+            )
