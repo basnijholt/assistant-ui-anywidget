@@ -55,7 +55,7 @@ class TestGlobalAgentAutoDetection:
                 mock_init.return_value = MagicMock()
 
                 # Override auto-detection with explicit provider
-                get_agent(ai_config={"provider": "openai", "model": "gpt-3.5-turbo"})
+                get_agent(provider="openai", model="gpt-3.5-turbo")
 
                 mock_init.assert_called_once()
                 call_args = mock_init.call_args
@@ -83,7 +83,7 @@ class TestGlobalAgentAutoDetection:
                 mock_init.return_value = MagicMock()
 
                 # Specify model but keep provider as auto
-                get_agent(ai_config={"model": "gpt-3.5-turbo"})
+                get_agent(model="gpt-3.5-turbo")
 
                 mock_init.assert_called_once()
                 call_args = mock_init.call_args

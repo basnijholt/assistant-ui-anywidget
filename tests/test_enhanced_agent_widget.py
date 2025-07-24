@@ -213,9 +213,7 @@ def widget(mock_kernel: MockKernel) -> AgentWidget:
         with patch.dict("os.environ", {}, clear=True):
             # Create widget without API keys to force mock AI
             widget = AgentWidget(
-                ai_config={
-                    "require_approval": False,
-                }
+                require_approval=False,
             )
             widget.kernel = mock_kernel  # type: ignore[assignment]
             return widget

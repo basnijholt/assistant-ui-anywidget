@@ -92,11 +92,8 @@ class TestLangGraphApproval:
 
         # Create widget with LangGraph
         widget = AgentWidget(
-            ai_config={
-                "use_langgraph": True,
-                "require_approval": True,
-                "provider": "auto",
-            }
+            require_approval=True,
+            provider="auto",
         )
 
         assert widget.ai_service is not None
@@ -104,10 +101,8 @@ class TestLangGraphApproval:
 
         # Create widget with LangGraph service (approval disabled)
         simple_widget = AgentWidget(
-            ai_config={
-                "require_approval": False,
-                "provider": "auto",
-            }
+            require_approval=False,
+            provider="auto",
         )
 
         assert simple_widget.ai_service is not None

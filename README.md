@@ -60,16 +60,16 @@ That's it! The agent will appear in your notebook cell. Use **Ctrl+D** (or Cmd+D
 
 ```python
 # Choose a specific AI provider
-agent = get_agent(ai_config={
-    'provider': 'openai',         # or 'anthropic', 'google_genai'
-    'model': 'gpt-4',            # or 'claude-3', 'gemini-pro'
-    'require_approval': False,    # Auto-approve code execution
-})
+agent = get_agent(
+    provider='openai',         # or 'anthropic', 'google_genai'
+    model='gpt-4',            # or 'claude-3', 'gemini-pro'
+    require_approval=False,    # Auto-approve code execution
+)
 
 # Enable approval workflows
-agent = get_agent(ai_config={
-    'require_approval': True,     # Ask before executing code
-})
+agent = get_agent(
+    require_approval=True,     # Ask before executing code
+)
 
 # Reset to a fresh instance
 agent = get_agent(reset=True)

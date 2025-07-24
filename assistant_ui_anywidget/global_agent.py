@@ -1,25 +1,34 @@
 """Global agent instance management for notebook convenience."""
 
-from typing import Any, Dict, Optional
+from typing import Optional
 
 from .agent_widget import AgentWidget
-from .kernel_interface import AIConfig
 
 # Global agent instance
 _AGENT: Optional[AgentWidget] = None
 
 
 def get_agent(
-    ai_config: Optional[Dict[str, Any] | AIConfig] = None,
+    model: Optional[str] = None,
+    provider: Optional[str] = "auto",
+    temperature: float = 0.7,
+    max_tokens: int = 2000,
+    system_prompt: str = "You are a helpful AI assistant with access to the Jupyter kernel...",
+    require_approval: bool = False,
     reset: bool = False,
-    **kwargs: Any,
+    show_help: bool = True,
 ) -> AgentWidget:
     """Get or create the global agent instance.
 
     Args:
-        ai_config: Optional AI configuration (dict or AIConfig)
+        model: AI model name (auto-detected if None)
+        provider: AI provider ('openai', 'anthropic', 'google_genai', or 'auto')
+        temperature: Response randomness (0.0-1.0)
+        max_tokens: Maximum response length
+        system_prompt: System prompt for the AI
+        require_approval: Whether to require approval for code execution
         reset: If True, creates a new agent instance
-        **kwargs: Additional arguments passed to AgentWidget
+        show_help: Whether to show the welcome message
 
     Returns:
         AgentWidget: The global agent instance
@@ -27,26 +36,16 @@ def get_agent(
     global _AGENT
 
     if _AGENT is None or reset:
-        # Convert dict to AIConfig if needed
-        if isinstance(ai_config, dict):
-            config = AIConfig(
-                model=ai_config.get("model"),
-                provider=ai_config.get("provider", "auto"),
-                temperature=ai_config.get("temperature", 0.7),
-                max_tokens=ai_config.get("max_tokens", 2000),
-                system_prompt=ai_config.get(
-                    "system_prompt",
-                    "You are a helpful AI assistant with access to the Jupyter kernel...",
-                ),
-                require_approval=ai_config.get("require_approval", False),
-            )
-        else:
-            config = ai_config or AIConfig(require_approval=False, provider="auto")
-
-        # Create new agent (show_help=True by default for notebooks)
-        if "show_help" not in kwargs:
-            kwargs["show_help"] = True
-        _AGENT = AgentWidget(ai_config=config, **kwargs)
+        # Create new agent with provided parameters
+        _AGENT = AgentWidget(
+            model=model,
+            provider=provider,
+            temperature=temperature,
+            max_tokens=max_tokens,
+            system_prompt=system_prompt,
+            require_approval=require_approval,
+            show_help=show_help,
+        )
 
     return _AGENT
 

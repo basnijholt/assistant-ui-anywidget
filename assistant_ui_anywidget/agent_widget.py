@@ -46,7 +46,12 @@ class AgentWidget(anywidget.AnyWidget):
 
     def __init__(
         self,
-        ai_config: Optional[Dict[str, Any] | AIConfig] = None,
+        model: Optional[str] = None,
+        provider: Optional[str] = "auto",
+        temperature: float = 0.7,
+        max_tokens: int = 2000,
+        system_prompt: str = "You are a helpful AI assistant with access to the Jupyter kernel...",
+        require_approval: bool = False,
         show_help: bool = False,
         **kwargs: Any,
     ) -> None:
@@ -63,36 +68,28 @@ class AgentWidget(anywidget.AnyWidget):
         # Initialize thread ID
         self._thread_id: Optional[str] = None
 
-        # Initialize AI service only if AI config is provided
+        # Initialize AI service
         self.ai_service: Optional[LangGraphAIService] = None
-        if ai_config:
-            # Convert dict to AIConfig if needed
-            if isinstance(ai_config, dict):
-                # Filter out unknown keys before creating AIConfig
-                valid_keys = {
-                    "model",
-                    "provider",
-                    "temperature",
-                    "max_tokens",
-                    "system_prompt",
-                    "require_approval",
-                }
-                filtered_config = {
-                    k: v for k, v in ai_config.items() if k in valid_keys
-                }
-                config = AIConfig(**filtered_config)
-            else:
-                config = ai_config
 
-            self.ai_config = config.to_dict()
+        # Create AIConfig from parameters
+        config = AIConfig(
+            model=model,
+            provider=provider,
+            temperature=temperature,
+            max_tokens=max_tokens,
+            system_prompt=system_prompt,
+            require_approval=require_approval,
+        )
 
-            # Always use LangGraph service
-            self.ai_service = LangGraphAIService(
-                kernel=self.kernel,
-                model=config.model,
-                provider=config.provider,
-                require_approval=config.require_approval,
-            )
+        self.ai_config = config.to_dict()
+
+        # Always use LangGraph service
+        self.ai_service = LangGraphAIService(
+            kernel=self.kernel,
+            model=model,
+            provider=provider,
+            require_approval=require_approval,
+        )
 
         # Set up message handling
         self.on_msg(self._handle_message)
