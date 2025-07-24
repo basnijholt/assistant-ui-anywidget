@@ -4,7 +4,7 @@ import pathlib
 from collections.abc import Callable
 
 import pytest
-from agent_widget import AgentWidget
+from assistant_ui_anywidget.agent_widget import AgentWidget
 
 # Type alias for the UI message factory
 UIMessageFactory = Callable[[str], dict[str, str]]

@@ -120,3 +120,6 @@ src/graphviz_anywidget/static/
 frontend/dist/*
 
 frontend/screenshots/*
+
+# AI conversation logs
+ai_conversation_logs/

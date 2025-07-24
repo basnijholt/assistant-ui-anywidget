@@ -5,7 +5,7 @@ import sys
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "python"))  # noqa: PTH118, PTH120
 
-from agent_widget import AgentWidget
+from assistant_ui_anywidget.agent_widget import AgentWidget
 
 
 def test_widget() -> None:
@@ -44,7 +44,7 @@ def test_widget() -> None:
     print("3. Run:")
     print("   import sys")
     print("   sys.path.insert(0, 'python')")
-    print("   from agent_widget import AgentWidget")
+    print("   from assistant_ui_anywidget.agent_widget import AgentWidget")
     print("   widget = AgentWidget()")
     print("   widget")
 

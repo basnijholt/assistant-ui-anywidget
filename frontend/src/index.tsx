@@ -68,17 +68,32 @@ const styles = `
 
 type ActionButton = string | { text: string; color?: string; icon?: string };
 
-function ChatWidget() {
+type CodeHistoryItem = {
+  code: string;
+  execution_count: number;
+  timestamp: number;
+  success: boolean;
+  output?: string;
+};
+
+export function ChatWidget() {
   const [input, setInput] = useState("");
   const [chatHistory] = useModelState("chat_history");
   const [actionButtons] = useModelState<ActionButton[]>("action_buttons");
+  const [codeHistory] = useModelState("code_history");
+  const [activeTab, setActiveTab] = useState<"chat" | "code">("chat");
   const model = useModel();
   const [copiedIndex, setCopiedIndex] = useState<number | null>(null);
+  const [copiedCodeIndex, setCopiedCodeIndex] = useState<number | null>(null);
   const messagesEndRef = useRef<null | HTMLDivElement>(null);
   const textareaRef = useRef<null | HTMLTextAreaElement>(null);
 
   // Always use synchronized chat history as the source of truth
   const messages = useMemo(() => (Array.isArray(chatHistory) ? chatHistory : []), [chatHistory]);
+  const codeItems = useMemo(
+    () => (Array.isArray(codeHistory) ? (codeHistory as CodeHistoryItem[]) : []),
+    [codeHistory]
+  );
 
   // Auto-scroll to bottom when new messages arrive
   const scrollToBottom = () => {
@@ -129,7 +144,7 @@ function ChatWidget() {
 
   const handleActionButton = (buttonText: string) => {
     if (model) {
-      model.send({ type: "user_message", text: buttonText });
+      model.send({ type: "action_button", action: buttonText });
       model.save_changes();
     }
   };
@@ -139,6 +154,16 @@ function ChatWidget() {
       await navigator.clipboard.writeText(text);
       setCopiedIndex(index);
       setTimeout(() => setCopiedIndex(null), 2000);
+    } catch (err) {
+      console.error("Failed to copy:", err);
+    }
+  };
+
+  const copyCodeToClipboard = async (text: string, index: number) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopiedCodeIndex(index);
+      setTimeout(() => setCopiedCodeIndex(null), 2000);
     } catch (err) {
       console.error("Failed to copy:", err);
     }
@@ -160,170 +185,366 @@ function ChatWidget() {
           boxShadow: "0 2px 8px rgba(0,0,0,0.08)",
         }}
       >
+        {/* Tab Bar */}
         <div
           style={{
-            flex: 1,
-            padding: "20px",
-            overflowY: "auto",
-            backgroundColor: "#fafafa",
+            display: "flex",
+            borderBottom: "1px solid #e0e0e0",
+            backgroundColor: "#f8f9fa",
             borderRadius: "12px 12px 0 0",
           }}
         >
-          {messages.length === 0 ? (
-            <div
-              style={{
-                color: "#999",
-                fontStyle: "italic",
-                textAlign: "center",
-                marginTop: "100px",
-              }}
-            >
-              Start a conversation...
-            </div>
-          ) : (
-            messages.map((msg, i) => (
-              <div
-                key={`${msg.role}-${i}-${msg.content?.slice(0, 20)}`}
-                className="message-enter"
-                style={{
-                  marginBottom: "16px",
-                  display: "flex",
-                  justifyContent: msg.role === "user" ? "flex-end" : "flex-start",
-                }}
-              >
-                <div
-                  style={{
-                    maxWidth: "75%",
-                    padding: "12px 16px",
-                    backgroundColor: msg.role === "user" ? "#007bff" : "#fff",
-                    color: msg.role === "user" ? "white" : "#333",
-                    borderRadius: msg.role === "user" ? "18px 18px 4px 18px" : "18px 18px 18px 4px",
-                    boxShadow: "0 1px 3px rgba(0,0,0,0.1)",
-                    wordBreak: "break-word",
-                  }}
-                >
-                  <div
-                    style={{
-                      fontSize: "12px",
-                      opacity: 0.7,
-                      marginBottom: "4px",
-                      fontWeight: "500",
-                    }}
-                  >
-                    {msg.role === "user" ? "You" : "Assistant"}
-                  </div>
-                  {msg.role === "assistant" ? (
-                    <ReactMarkdown
-                      remarkPlugins={[remarkGfm]}
-                      components={{
-                        code({ className, children, ...props }) {
-                          const match = /language-(\w+)/.exec(className || "");
-                          const codeString = String(children).replace(/\n$/, "");
-                          const isInline = !className || !match;
-
-                          return !isInline ? (
-                            <div className="code-container">
-                              <button
-                                className={`copy-button ${copiedIndex === i ? "copied" : ""}`}
-                                onClick={() => copyToClipboard(codeString, i)}
-                              >
-                                {copiedIndex === i ? "✓ Copied" : "Copy"}
-                              </button>
-                              <SyntaxHighlighter
-                                style={vscDarkPlus as any}
-                                language={match[1]}
-                                PreTag="div"
-                                customStyle={{
-                                  margin: "8px 0",
-                                  borderRadius: "6px",
-                                  fontSize: "13px",
-                                }}
-                              >
-                                {codeString}
-                              </SyntaxHighlighter>
-                            </div>
-                          ) : (
-                            <code
-                              className={className}
-                              style={{
-                                backgroundColor: "rgba(0,0,0,0.05)",
-                                padding: "2px 4px",
-                                borderRadius: "3px",
-                                fontSize: "13px",
-                              }}
-                              {...props}
-                            >
-                              {children}
-                            </code>
-                          );
-                        },
-                      }}
-                    >
-                      {msg.content}
-                    </ReactMarkdown>
-                  ) : (
-                    <span style={{ whiteSpace: "pre-wrap" }}>{msg.content}</span>
-                  )}
-                </div>
-              </div>
-            ))
-          )}
-          <div ref={messagesEndRef} />
-        </div>
-
-        {actionButtons && Array.isArray(actionButtons) && actionButtons.length > 0 && (
-          <div
+          <button
+            onClick={() => setActiveTab("chat")}
             style={{
-              padding: "16px",
-              borderTop: "1px solid #e0e0e0",
-              backgroundColor: "#f8f9fa",
-              display: "flex",
-              gap: "8px",
-              flexWrap: "wrap",
+              padding: "12px 24px",
+              border: "none",
+              backgroundColor: activeTab === "chat" ? "#fff" : "transparent",
+              borderBottom: activeTab === "chat" ? "2px solid #007bff" : "none",
+              cursor: "pointer",
+              fontSize: "14px",
+              fontWeight: activeTab === "chat" ? "600" : "500",
+              color: activeTab === "chat" ? "#007bff" : "#666",
+              transition: "all 0.2s",
             }}
           >
-            {actionButtons.map((button: ActionButton, index: number) => {
-              // Handle both string and object formats
-              const buttonConfig = typeof button === "string" ? { text: button } : button;
-
-              return (
-                <button
-                  key={index}
-                  onClick={() => handleActionButton(buttonConfig.text)}
+            Chat
+          </button>
+          <button
+            onClick={() => setActiveTab("code")}
+            style={{
+              padding: "12px 24px",
+              border: "none",
+              backgroundColor: activeTab === "code" ? "#fff" : "transparent",
+              borderBottom: activeTab === "code" ? "2px solid #007bff" : "none",
+              cursor: "pointer",
+              fontSize: "14px",
+              fontWeight: activeTab === "code" ? "600" : "500",
+              color: activeTab === "code" ? "#007bff" : "#666",
+              transition: "all 0.2s",
+              position: "relative",
+            }}
+          >
+            Code History
+            {codeItems.length > 0 && (
+              <span
+                style={{
+                  position: "absolute",
+                  top: "8px",
+                  right: "8px",
+                  backgroundColor: "#007bff",
+                  color: "white",
+                  borderRadius: "10px",
+                  fontSize: "11px",
+                  padding: "2px 6px",
+                  minWidth: "18px",
+                  textAlign: "center",
+                }}
+              >
+                {codeItems.length}
+              </span>
+            )}
+          </button>
+        </div>
+        {/* Tab Content */}
+        {activeTab === "chat" ? (
+          <>
+            <div
+              style={{
+                flex: 1,
+                padding: "20px",
+                overflowY: "auto",
+                backgroundColor: "#fafafa",
+              }}
+            >
+              {messages.length === 0 ? (
+                <div
                   style={{
-                    padding: "10px 20px",
-                    backgroundColor: buttonConfig.color || "#007bff",
-                    color: "white",
-                    border: "none",
-                    borderRadius: "8px",
-                    cursor: "pointer",
-                    fontSize: "14px",
-                    fontWeight: "500",
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "8px",
-                    transition: "all 0.2s ease",
-                    boxShadow: "0 2px 4px rgba(0,0,0,0.1)",
-                  }}
-                  onMouseEnter={e => {
-                    e.currentTarget.style.transform = "translateY(-2px)";
-                    e.currentTarget.style.boxShadow = "0 4px 8px rgba(0,0,0,0.15)";
-                  }}
-                  onMouseLeave={e => {
-                    e.currentTarget.style.transform = "translateY(0)";
-                    e.currentTarget.style.boxShadow = "0 2px 4px rgba(0,0,0,0.1)";
+                    color: "#999",
+                    fontStyle: "italic",
+                    textAlign: "center",
+                    marginTop: "100px",
                   }}
                 >
-                  {buttonConfig.icon && (
-                    <span style={{ fontSize: "18px" }}>{buttonConfig.icon}</span>
-                  )}
-                  {buttonConfig.text}
-                </button>
-              );
-            })}
+                  Start a conversation...
+                </div>
+              ) : (
+                messages.map((msg, i) => (
+                  <div
+                    key={`${msg.role}-${i}-${msg.content?.slice(0, 20)}`}
+                    className="message-enter"
+                    style={{
+                      marginBottom: "16px",
+                      display: "flex",
+                      justifyContent: msg.role === "user" ? "flex-end" : "flex-start",
+                    }}
+                  >
+                    <div
+                      style={{
+                        maxWidth: "75%",
+                        padding: "12px 16px",
+                        backgroundColor: msg.role === "user" ? "#007bff" : "#fff",
+                        color: msg.role === "user" ? "white" : "#333",
+                        borderRadius:
+                          msg.role === "user" ? "18px 18px 4px 18px" : "18px 18px 18px 4px",
+                        boxShadow: "0 1px 3px rgba(0,0,0,0.1)",
+                        wordBreak: "break-word",
+                      }}
+                    >
+                      <div
+                        style={{
+                          fontSize: "12px",
+                          opacity: 0.7,
+                          marginBottom: "4px",
+                          fontWeight: "500",
+                        }}
+                      >
+                        {msg.role === "user" ? "You" : "Assistant"}
+                      </div>
+                      {msg.role === "assistant" ? (
+                        <ReactMarkdown
+                          remarkPlugins={[remarkGfm]}
+                          components={{
+                            code({ className, children, ...props }) {
+                              const match = /language-(\w+)/.exec(className || "");
+                              const codeString = String(children).replace(/\n$/, "");
+                              const isInline = !className || !match;
+
+                              return !isInline ? (
+                                <div className="code-container">
+                                  <button
+                                    className={`copy-button ${copiedIndex === i ? "copied" : ""}`}
+                                    onClick={() => copyToClipboard(codeString, i)}
+                                  >
+                                    {copiedIndex === i ? "✓ Copied" : "Copy"}
+                                  </button>
+                                  <SyntaxHighlighter
+                                    style={vscDarkPlus as any}
+                                    language={match[1]}
+                                    PreTag="div"
+                                    customStyle={{
+                                      margin: "8px 0",
+                                      borderRadius: "6px",
+                                      fontSize: "13px",
+                                    }}
+                                  >
+                                    {codeString}
+                                  </SyntaxHighlighter>
+                                </div>
+                              ) : (
+                                <code
+                                  className={className}
+                                  style={{
+                                    backgroundColor: "rgba(0,0,0,0.05)",
+                                    padding: "2px 4px",
+                                    borderRadius: "3px",
+                                    fontSize: "13px",
+                                  }}
+                                  {...props}
+                                >
+                                  {children}
+                                </code>
+                              );
+                            },
+                          }}
+                        >
+                          {Array.isArray(msg.content) ? msg.content.join("\n") : msg.content}
+                        </ReactMarkdown>
+                      ) : (
+                        <span style={{ whiteSpace: "pre-wrap" }}>
+                          {Array.isArray(msg.content) ? msg.content.join("\n") : msg.content}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                ))
+              )}
+              <div ref={messagesEndRef} />
+            </div>
+
+            {actionButtons && Array.isArray(actionButtons) && actionButtons.length > 0 && (
+              <div
+                style={{
+                  padding: "16px",
+                  borderTop: "1px solid #e0e0e0",
+                  backgroundColor: "#f8f9fa",
+                  display: "flex",
+                  gap: "8px",
+                  flexWrap: "wrap",
+                }}
+              >
+                {actionButtons.map((button: ActionButton, index: number) => {
+                  // Handle both string and object formats
+                  const buttonConfig = typeof button === "string" ? { text: button } : button;
+
+                  return (
+                    <button
+                      key={index}
+                      onClick={() => handleActionButton(buttonConfig.text)}
+                      style={{
+                        padding: "10px 20px",
+                        backgroundColor: buttonConfig.color || "#007bff",
+                        color: "white",
+                        border: "none",
+                        borderRadius: "8px",
+                        cursor: "pointer",
+                        fontSize: "14px",
+                        fontWeight: "500",
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "8px",
+                        transition: "all 0.2s ease",
+                        boxShadow: "0 2px 4px rgba(0,0,0,0.1)",
+                      }}
+                      onMouseEnter={e => {
+                        e.currentTarget.style.transform = "translateY(-2px)";
+                        e.currentTarget.style.boxShadow = "0 4px 8px rgba(0,0,0,0.15)";
+                      }}
+                      onMouseLeave={e => {
+                        e.currentTarget.style.transform = "translateY(0)";
+                        e.currentTarget.style.boxShadow = "0 2px 4px rgba(0,0,0,0.1)";
+                      }}
+                    >
+                      {buttonConfig.icon && (
+                        <span style={{ fontSize: "18px" }}>{buttonConfig.icon}</span>
+                      )}
+                      {buttonConfig.text}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          </>
+        ) : (
+          /* Code History Tab */
+          <div
+            style={{
+              flex: 1,
+              padding: "20px",
+              overflowY: "auto",
+              backgroundColor: "#fafafa",
+            }}
+          >
+            {codeItems.length === 0 ? (
+              <div
+                style={{
+                  color: "#999",
+                  fontStyle: "italic",
+                  textAlign: "center",
+                  marginTop: "100px",
+                }}
+              >
+                No code executed yet...
+              </div>
+            ) : (
+              <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+                {codeItems
+                  .slice()
+                  .reverse()
+                  .map((item, index) => {
+                    const actualIndex = codeItems.length - 1 - index;
+                    const date = new Date(item.timestamp * 1000);
+                    const timeStr = date.toLocaleTimeString();
+
+                    return (
+                      <div
+                        key={`code-${actualIndex}-${item.timestamp}`}
+                        className="message-enter"
+                        style={{
+                          backgroundColor: "#fff",
+                          borderRadius: "8px",
+                          padding: "16px",
+                          boxShadow: "0 1px 3px rgba(0,0,0,0.1)",
+                          border: item.success ? "1px solid #e0e0e0" : "1px solid #ffcccb",
+                        }}
+                      >
+                        <div
+                          style={{
+                            display: "flex",
+                            justifyContent: "space-between",
+                            alignItems: "center",
+                            marginBottom: "12px",
+                          }}
+                        >
+                          <div style={{ display: "flex", gap: "12px", alignItems: "center" }}>
+                            <span
+                              style={{
+                                fontSize: "12px",
+                                color: "#666",
+                                fontWeight: "500",
+                              }}
+                            >
+                              [{item.execution_count}]
+                            </span>
+                            <span
+                              style={{
+                                fontSize: "12px",
+                                color: "#999",
+                              }}
+                            >
+                              {timeStr}
+                            </span>
+                            {!item.success && (
+                              <span
+                                style={{
+                                  fontSize: "12px",
+                                  color: "#dc3545",
+                                  fontWeight: "500",
+                                }}
+                              >
+                                ❌ Error
+                              </span>
+                            )}
+                          </div>
+                        </div>
+
+                        <div className="code-container">
+                          <button
+                            className={`copy-button ${copiedCodeIndex === actualIndex ? "copied" : ""}`}
+                            onClick={() => copyCodeToClipboard(item.code, actualIndex)}
+                          >
+                            {copiedCodeIndex === actualIndex ? "✓ Copied" : "Copy"}
+                          </button>
+                          <SyntaxHighlighter
+                            style={vscDarkPlus as any}
+                            language="python"
+                            PreTag="div"
+                            customStyle={{
+                              margin: "0",
+                              borderRadius: "6px",
+                              fontSize: "13px",
+                            }}
+                          >
+                            {item.code}
+                          </SyntaxHighlighter>
+                        </div>
+
+                        {item.output && (
+                          <div
+                            style={{
+                              marginTop: "12px",
+                              padding: "8px 12px",
+                              backgroundColor: "#f8f9fa",
+                              borderRadius: "6px",
+                              fontSize: "13px",
+                              fontFamily: "monospace",
+                              whiteSpace: "pre-wrap",
+                              maxHeight: "200px",
+                              overflowY: "auto",
+                            }}
+                          >
+                            {item.output}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+              </div>
+            )}
           </div>
         )}
 
+        {/* Input Form - Always visible */}
         <form
           onSubmit={handleSubmit}
           style={{
@@ -344,7 +565,11 @@ function ChatWidget() {
               adjustTextareaHeight();
             }}
             onKeyDown={handleKeyDown}
-            placeholder="Type a message... (Ctrl+D to send)"
+            placeholder={
+              activeTab === "chat"
+                ? "Type a message... (Ctrl+D to send)"
+                : "Switch to Chat tab to send messages"
+            }
             style={{
               flex: 1,
               padding: "10px 14px",

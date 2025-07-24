@@ -1,15 +1,10 @@
 """Pytest configuration and fixtures for widget tests."""
 
-import sys
 from collections.abc import Callable
-from pathlib import Path
 
 import pytest
 
-# Add the python module to the path
-sys.path.insert(0, str(Path(__file__).parent.parent / "python"))
-
-from agent_widget import AgentWidget
+from assistant_ui_anywidget.agent_widget import AgentWidget
 
 
 @pytest.fixture  # type: ignore[misc]

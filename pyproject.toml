@@ -34,7 +34,9 @@ dependencies = [
     "traitlets>=5.0.0",
     "jupyter>=1.0.0",
     "ipywidgets>=8.0.0",
+    "pydantic-settings>=2.10.1",
 ]
+
 requires-python = ">=3.10"
 
 [build-system]
@@ -43,12 +45,15 @@ build-backend = "hatchling.build"
 
 [tool.hatch.build]
 include = [
-    "python/**/*.py",
+    "assistant_ui_anywidget/**/*.py",
     "frontend/dist/**/*"
 ]
 
+[tool.hatch.metadata]
+allow-direct-references = true
+
 [tool.hatch.build.targets.wheel]
-packages = ["python"]
+packages = ["assistant_ui_anywidget"]
 
 [project.urls]
 Homepage = "https://github.com/your-org/assistant-ui-anywidget"
@@ -58,6 +63,18 @@ Issues = "https://github.com/your-org/assistant-ui-anywidget/issues"
 Changelog = "https://github.com/your-org/assistant-ui-anywidget/releases"
 
 [project.optional-dependencies]
+ai = [
+    "langchain>=0.1.0",
+    "langchain-openai>=0.0.5",
+    # Using custom branch until PR is merged: https://github.com/langchain-ai/langchain-google/pull/1056
+    # Fixes Gemini API issue with AIMessage + tool_calls in conversation history
+    "langchain-google-genai @ git+https://github.com/basnijholt/langchain-google.git@fix/gemini-aimessage-tool-calls-conversation-history#subdirectory=libs/genai",
+    "langchain-anthropic>=0.1.0",
+    "langgraph>=0.0.20",
+    "openai>=1.0.0",
+    "python-dotenv>=1.0.0",
+    "pyyaml>=6.0",
+]
 dev = [
     "notebook>=7.3.3",
     "pytest>=8.3.5",
@@ -81,6 +98,8 @@ docs = [
 dev = [
     "coverage[toml]>=7.9.2",
     "notebook>=7.3.3",
+    "numpy>=2.2.6",
+    "pandas>=2.3.1",
     "pytest>=8.3.5",
     "pytest-cov>=5.0.0",
 ]
@@ -91,7 +110,7 @@ addopts = [
     "-ra",
     "--strict-markers",
     "--strict-config",
-    "--cov=python",
+    "--cov=assistant_ui_anywidget",
     "--cov-report=term-missing",
     "--cov-report=html",
     "--cov-report=xml",
@@ -108,7 +127,7 @@ markers = [
 ]
 
 [tool.coverage.run]
-source = ["python", "."]
+source = ["assistant_ui_anywidget", "."]
 omit = [
     "tests/*",
     "test_*",

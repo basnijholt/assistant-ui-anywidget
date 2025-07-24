@@ -4,7 +4,7 @@
 [![MIT License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![Tests](https://github.com/basnijholt/assistant-ui-anywidget/workflows/CI/badge.svg)](https://github.com/basnijholt/assistant-ui-anywidget/actions)
 
-A production-ready interactive chat widget integrating Assistant-UI with AnyWidget for Jupyter notebooks, featuring comprehensive testing, modern tooling, and CI/CD automation.
+A production-ready AI-powered assistant widget with Jupyter kernel access, featuring automatic provider detection, comprehensive testing, and modern tooling.
 
 ## Quick Start
 
@@ -25,32 +25,120 @@ pytest
 cd frontend && npm test
 ```
 
-## Usage in Jupyter
+## AI Setup (Optional)
+
+The widget automatically detects and uses available AI providers. Create a `.env` file:
 
 ```bash
+# Copy the example file
+cp .env.example .env
+
+# Edit .env and add any API key:
+OPENAI_API_KEY=sk-...          # For GPT-4, GPT-3.5
+ANTHROPIC_API_KEY=sk-ant-...    # For Claude 3 models
+GOOGLE_API_KEY=...              # For Gemini Pro
+```
+
+The widget will:
+
+- Automatically load API keys from `.env`
+- Use the first available provider (OpenAI → Anthropic → Google)
+- Fall back to a helpful mock AI if no keys are set
+- Work perfectly with just one provider (e.g., only Google)
+
+## Usage in Jupyter
+
+### 🚀 **Recommended: Global Agent Interface**
+
+The new global agent interface prevents keyboard shortcut conflicts and provides better notebook experience:
+
+```python
 # Start Jupyter notebook
 uv run jupyter notebook
 
-# In a new notebook:
-import sys
-sys.path.insert(0, 'python')
-from agent_widget import AgentWidget
+# NEW RECOMMENDED WAY - Simple and safe!
+from assistant_ui_anywidget import get_agent
 
-# Create and display the widget
-widget = AgentWidget()
+# Get the global agent (creates if doesn't exist)
+agent = get_agent()
+agent
+
+# Even simpler - one line to display
+from assistant_ui_anywidget import display_agent
+display_agent()
+
+# Or use the short alias
+from assistant_ui_anywidget import agent
+my_agent = agent()
+```
+
+**🔥 Key Benefits:**
+
+- **Keyboard Safety**: Uses **Ctrl+D** to send messages (not Shift+Enter)
+- **No Conflicts**: Never accidentally execute cells when chatting
+- **Global State**: Same agent instance across all notebook cells
+- **Auto-Config**: Sensible defaults for notebook use
+
+### ⚙️ **Custom Configuration**
+
+```python
+# With custom configuration
+agent = get_agent(ai_config={
+    'provider': 'openai',         # Force specific provider
+    'model': 'gpt-4',            # Choose model
+    'require_approval': False,    # Auto-approve code execution
+    'temperature': 0.7           # Response creativity
+})
+
+# With LangGraph for approval workflows
+agent = get_agent(ai_config={
+    'use_langgraph': True,       # Enable LangGraph agent
+    'require_approval': True,    # Require approval for code execution
+    'provider': 'auto'           # Auto-detect AI provider
+})
+
+# Reset to create fresh instance
+agent = get_agent(reset=True)
+```
+
+### 🔧 **Advanced: Direct Widget (Legacy)**
+
+```python
+# Direct widget creation (still works, but not recommended for notebooks)
+from assistant_ui_anywidget import AgentWidget
+
+widget = AgentWidget(
+    ai_config={
+        'provider': 'google_genai',  # Force specific provider
+        'model': 'gemini-pro',       # Choose model
+        'require_approval': False,    # Auto-approve code execution
+    }
+)
 widget
 ```
 
 ## Features
 
+### AI Capabilities
+
+- ✅ **Multi-provider AI support** - OpenAI, Anthropic, Google (automatic detection)
+- ✅ **Automatic provider selection** - Uses any available API key
+- ✅ **Environment variable loading** - Reads from `.env` files via python-dotenv
+- ✅ **Kernel-aware AI** - Can inspect variables and execute code
+- ✅ **Natural language interface** - Ask questions in plain English
+- ✅ **Fallback mock AI** - Works without API keys for development
+
+### Core Features
+
 - ✅ **Production-ready chat interface** with React and TypeScript
+- ✅ **Jupyter kernel access** - Read variables, execute code, debug errors
 - ✅ **Bidirectional communication** between Python and JavaScript
 - ✅ **Self-contained** - all dependencies bundled (1.4MB)
 - ✅ **Markdown support** with syntax highlighting
 - ✅ **Dynamic action buttons** for interactive responses
 - ✅ **Screenshot capability** - View widget without Jupyter using Puppeteer
 - ✅ **Modern tooling** (Vite, TypeScript, ESLint, Prettier)
-- ✅ **Comprehensive test suite** (74 Python + 6 frontend tests)
+- ✅ **Comprehensive test suite** (85% Python coverage + frontend tests)
 - ✅ **CI/CD automation** with GitHub Actions
 - ✅ **Type safety** with full TypeScript and mypy coverage
 - ✅ **Code quality** with pre-commit hooks and linting
@@ -154,6 +242,30 @@ ruff check python tests         # Python
 mypy python                      # Type checking
 ```
 
+## AI Service Architecture
+
+The widget supports two AI service implementations:
+
+### 1. **Simple Service** (Default)
+
+- Direct tool calling without state management
+- Lightweight and fast
+- Perfect for basic chat and code execution
+- No approval workflows
+
+### 2. **LangGraph Service** (Optional)
+
+- State machine-based agent with approval workflows
+- Requires approval for code execution
+- Automatic execution for read-only operations
+- Extensible for complex multi-step workflows
+
+Enable LangGraph with:
+
+```python
+agent = get_agent(ai_config={'use_langgraph': True, 'require_approval': True})
+```
+
 ## How It Works
 
 1. **Python Side** (`python/agent_widget.py`):
@@ -170,6 +282,7 @@ mypy python                      # Type checking
    - Python → JS: `widget.send()` method
    - JS → Python: `model.send()` method
    - Bidirectional message passing with JSON
+   - **Keyboard**: Ctrl+D (or Cmd+D) sends messages safely without cell execution conflicts
 
 ## Troubleshooting
 
