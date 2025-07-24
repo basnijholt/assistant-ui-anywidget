@@ -129,7 +129,7 @@ export function ChatWidget() {
 
   const handleActionButton = (buttonText: string) => {
     if (model) {
-      model.send({ type: "user_message", text: buttonText });
+      model.send({ type: "action_button", action: buttonText });
       model.save_changes();
     }
   };
