@@ -24,7 +24,7 @@
     "screenshot:demo": "npm run demo & sleep 5 && npm run screenshot && kill $!"
   },
   "devDependencies": {
-    "@eslint/js": "^9.31.0",
+    "@eslint/js": "^9.33.0",
     "@testing-library/jest-dom": "^6.6.3",
     "@testing-library/react": "^16.3.0",
     "@types/react": "^18.2.43",
